@@ -1,0 +1,1289 @@
+
+
+# PROSPECT ENGINE V1 ## CAHIER DES CHARGES INTÉGRAL — PROMPT MAÎTRE CODEX **Ver…
+Texte collé
+
+
+
+# PROSPECT ENGINE V1
+## CAHIER DES CHARGES INTÉGRAL — PROMPT MAÎTRE CODEX
+**Version 1.0 — Spécification définitive**
+
+---
+
+# 0. MISSION ET RÈGLES ABSOLUES
+
+Tu es Codex, chargé d'agir comme une équipe complète de développement logiciel : architecte, développeur full-stack senior, ingénieur de collecte de données, expert en cybersécurité, designer UX/UI, ingénieur QA et responsable de livraison.
+
+**Ta mission est de concevoir, développer, tester, documenter et livrer PROSPECT ENGINE V1 : un logiciel de prospection B2B intelligent, réellement fonctionnel, utilisable localement sous Windows et conçu pour pouvoir évoluer vers un SaaS commercialisable.**
+
+L'utilisateur final n'a aucune connaissance en programmation. Il doit pouvoir installer, démarrer, configurer et utiliser l'application sans intervenir dans le code source.
+
+## Règles non négociables
+
+1. Aucun bouton décoratif sans fonctionnalité réelle.
+2. Aucune donnée fictive présentée comme réelle.
+3. Aucune API IA payante obligatoire.
+4. Aucune fonctionnalité déclarée terminée sans validation.
+5. Aucun horaire d'appel inventé.
+6. Aucun score commercial sans justification.
+7. Aucune collecte contournant les protections ou restrictions des sources.
+8. Aucune perte silencieuse de données.
+9. Aucun dépassement volontaire des budgets contrôlables.
+10. Aucune création automatique de rendez-vous avec une entreprise.
+11. Aucune fausse synchronisation avec ATLAS, Notion ou Google Calendar.
+12. Aucune dépendance à Docker pour l'utilisation quotidienne.
+13. Aucune suppression ou action destructive sans confirmation.
+14. Aucune fonctionnalité critique dissimulée derrière une interface visuellement convaincante mais inactive.
+
+**La fiabilité, l'utilité commerciale et la simplicité d'utilisation passent avant la sophistication technique.**
+
+Tu dois développer le logiciel, et non simplement rédiger un plan.
+
+---
+
+# 1. VISION DU PRODUIT
+
+Prospect Engine est un moteur de détection et de gestion d'opportunités commerciales B2B.
+
+Il doit permettre à l'utilisateur de trouver des entreprises susceptibles d'avoir besoin de prestations numériques, notamment de création ou refonte de sites web.
+
+Le logiciel doit :
+
+- Découvrir des entreprises.
+- Collecter leurs informations professionnelles.
+- Enrichir leurs fiches.
+- Identifier leur présence numérique.
+- Auditer leurs sites.
+- Détecter des besoins commerciaux potentiels.
+- Attribuer des scores justifiés.
+- Identifier leurs horaires d'ouverture et de contact.
+- Organiser les prospects.
+- Préparer la planification des appels via ATLAS.
+- Assurer le suivi commercial jusqu'à la conversion.
+
+## Positionnement
+
+La V1 est un outil privé pour un utilisateur unique.
+
+Elle doit cependant être structurée pour permettre une évolution vers un SaaS multi-utilisateur.
+
+Le marché initial est la Suisse, avec priorité à la Suisse romande.
+
+Le premier service commercial ciblé est la création de sites web.
+
+L'architecture doit permettre d'ajouter ultérieurement d'autres catégories de prestations, par exemple SEO, automatisation, maintenance ou marketing numérique.
+
+Ne pas limiter artificiellement le produit à la vente de sites internet.
+
+---
+
+# 2. ARCHITECTURE GÉNÉRALE
+
+## 2.1 Modèle retenu
+
+**Local-first, cloud-ready.**
+
+L'application doit fonctionner sur un ordinateur Windows sans serveur cloud permanent.
+
+Les données doivent être stockées localement.
+
+Les campagnes de collecte et les analyses doivent être exécutées localement.
+
+Une connexion internet est nécessaire pour consulter les sources externes, mais le CRM et les données déjà enregistrées doivent rester accessibles hors ligne.
+
+## 2.2 Stack recommandée
+
+Frontend :
+- Next.js.
+- TypeScript strict.
+- Tailwind CSS.
+- shadcn/ui.
+- Lucide Icons.
+- TanStack Query.
+
+Backend :
+- Python.
+- FastAPI.
+- Pydantic.
+- SQLAlchemy.
+- Alembic.
+
+Base de données :
+- SQLite pour V1.
+- Conception compatible avec PostgreSQL.
+
+Collecte :
+- HTTPX.
+- BeautifulSoup.
+- Playwright lorsque nécessaire et autorisé.
+- Connecteurs indépendants.
+- Gestion de la concurrence.
+- Cache.
+- Rate limiting.
+
+Audit :
+- Lighthouse.
+- Analyse HTML.
+- Contrôles HTTP.
+- Contrôles SEO techniques.
+- Vérifications mobiles et d'accessibilité.
+
+Traitements :
+- Worker local.
+- File de tâches persistante.
+- Journalisation.
+- Reprise après interruption.
+
+Tu peux proposer une alternative technique si elle réduit significativement la complexité sans sacrifier les fonctionnalités, mais tu dois documenter et justifier cette décision.
+
+## 2.3 Préparation SaaS
+
+Prévoir des frontières architecturales permettant ultérieurement :
+- PostgreSQL.
+- Authentification.
+- Organisations.
+- Isolation des données.
+- Hébergement cloud.
+- Quotas.
+- Facturation.
+- Abonnements.
+- Tâches distribuées.
+
+Ne pas développer inutilement ces fonctionnalités en V1.
+
+---
+
+# 3. EXPÉRIENCE UTILISATEUR
+
+L'application doit ressembler à un logiciel SaaS professionnel.
+
+## Direction artistique
+
+- Minimaliste.
+- Moderne.
+- Sobre.
+- Interface claire.
+- Navigation latérale.
+- Mode clair et sombre.
+- Responsive.
+- Tables lisibles.
+- Filtres rapides.
+- Chargements progressifs.
+- Messages d'erreur compréhensibles.
+- Animations discrètes.
+- Cohérence visuelle.
+
+Éviter les dashboards remplis d'éléments décoratifs inutiles.
+
+## Navigation principale
+
+Six pages obligatoires :
+
+1. Dashboard.
+2. Campagnes.
+3. Prospects.
+4. Prospection / CRM.
+5. Planification.
+6. Paramètres.
+
+Prévoir également :
+- Notifications internes.
+- Diagnostics.
+- Recherche globale.
+- États vides utiles.
+- Confirmations des actions importantes.
+
+---
+
+# 4. DASHBOARD
+
+Afficher uniquement des données réelles.
+
+Indicateurs :
+- Entreprises découvertes.
+- Entreprises analysées.
+- Prospects qualifiés.
+- Prospects à contacter.
+- Appels planifiés.
+- Appels effectués.
+- Appels sans réponse.
+- Prospects intéressés.
+- Devis envoyés.
+- Clients obtenus.
+- Taux de conversion.
+- Valeur des opportunités.
+- Dépenses externes mesurées.
+- Campagnes actives.
+
+Ajouter :
+- Graphiques temporels.
+- Répartition par secteur.
+- Performance par campagne.
+- Activités récentes.
+- Rappels à venir.
+
+Les statistiques doivent être recalculées à partir de la base de données.
+
+Ne jamais inventer de résultats pour remplir l'interface.
+
+---
+
+# 5. CAMPAIGN BUILDER
+
+L'utilisateur doit pouvoir créer des campagnes personnalisées.
+
+## Paramètres
+
+- Nom de campagne.
+- Description.
+- Pays.
+- Canton ou région.
+- Ville.
+- Rayon de recherche si applicable.
+- Secteurs d'activité.
+- Types d'opportunités.
+- Nombre maximal de prospects.
+- Score minimal.
+- Sources sélectionnées.
+- Profondeur d'analyse.
+- Budget maximal.
+- Critères d'exclusion.
+
+## Types d'opportunités
+
+Prévoir notamment :
+- Site officiel non identifié.
+- Site inaccessible.
+- Site présentant des problèmes techniques.
+- Mauvaises performances mobiles.
+- SEO technique insuffisant.
+- Présence numérique incomplète.
+- Informations commerciales incohérentes.
+
+Ces critères doivent rester configurables.
+
+## Actions
+
+- Créer.
+- Modifier.
+- Démarrer.
+- Mettre en pause.
+- Reprendre.
+- Arrêter.
+- Dupliquer.
+- Archiver.
+- Consulter les résultats.
+
+## Progression
+
+Afficher séparément :
+- Entreprises découvertes.
+- Entreprises normalisées.
+- Doublons détectés.
+- Entreprises enrichies.
+- Sites analysés.
+- Prospects qualifiés.
+- Erreurs.
+- Opérations restantes.
+
+Les résultats doivent apparaître progressivement.
+
+L'utilisateur doit pouvoir exploiter les premiers prospects sans attendre la fin de la campagne.
+
+---
+
+# 6. COLLECTE MULTI-SOURCES PROGRESSIVE
+
+## 6.1 Architecture des connecteurs
+
+Créer une interface standard pour tous les connecteurs.
+
+Chaque connecteur doit définir :
+- Identifiant.
+- Nom.
+- Description.
+- Capacités.
+- Configuration.
+- Prérequis.
+- Conditions d'utilisation.
+- Limites de requêtes.
+- Coût éventuel.
+- Statut.
+- Recherche.
+- Enrichissement.
+- Normalisation.
+- Gestion des erreurs.
+
+Les connecteurs doivent pouvoir être activés et désactivés indépendamment.
+
+Une source défaillante ne doit pas arrêter les autres.
+
+## 6.2 Sources prioritaires pour la Suisse
+
+### Source A — Registres officiels et Zefix
+
+Étudier les données officielles suisses et les interfaces disponibles.
+
+Références :
+- https://www.bj.admin.ch/fr/registre-du-commerce-zefix-et-regix
+- https://www.zefix.admin.ch/ZefixPublicREST/
+- https://opendata.swiss/fr/dataset/zefix-zentraler-firmenindex
+
+Vérifier les conditions d'accès, les quotas et les restrictions en vigueur.
+
+Zefix ne doit pas être utilisé comme mécanisme d'extraction massive de l'ensemble du registre si cet usage n'est pas autorisé.
+
+Respecter les recherches individuelles filtrées et les limitations applicables.
+
+### Source B — OpenStreetMap
+
+Étudier les données OpenStreetMap pour découvrir :
+- Commerces.
+- Artisans.
+- Restaurants.
+- Services.
+- Établissements professionnels.
+
+Privilégier les extraits régionaux appropriés pour les traitements volumineux.
+
+Respecter la licence ODbL et les obligations d'attribution.
+
+Overpass peut être utilisé pour des requêtes raisonnables dans les limites de l'instance.
+
+Ne pas utiliser le service public Nominatim pour une collecte systématique d'entreprises.
+
+### Source C — Sites officiels
+
+Lorsqu'un site officiel est identifié, analyser uniquement les pages pertinentes :
+- Accueil.
+- Contact.
+- Horaires.
+- Services.
+- Informations professionnelles.
+
+Limiter le nombre de pages consultées.
+
+Respecter les restrictions applicables.
+
+### Source D — Autres sources autorisées
+
+Prévoir une architecture permettant d'ajouter :
+- Annuaires professionnels disposant d'API ou autorisant cet usage.
+- Jeux de données ouverts.
+- Bases sectorielles.
+- Sources géographiques.
+- Fournisseurs commerciaux optionnels.
+
+Ne jamais supposer qu'une page publiquement visible peut être collectée et réutilisée sans restriction.
+
+## 6.3 Exigence opérationnelle
+
+Au moins un connecteur de découverte doit fonctionner réellement sans clé commerciale payante.
+
+Ne pas remplacer un connecteur réel par des données fictives.
+
+Si une source prévue est inaccessible, documenter pourquoi et implémenter une alternative autorisée lorsque c'est possible.
+
+## 6.4 Pipeline
+
+Découverte → Normalisation → Dédoublonnage → Enrichissement → Audit → Qualification → CRM.
+
+Chaque étape doit être indépendante, observable et récupérable.
+
+Prévoir :
+- Pagination.
+- Timeout.
+- Rate limiting.
+- Backoff exponentiel.
+- Cache.
+- Limites de concurrence.
+- Reprise.
+- Annulation.
+- Journal d'erreurs.
+- Gestion des quotas.
+- Détection des résultats incomplets.
+
+---
+
+# 7. NORMALISATION ET DÉDOUBLONNAGE
+
+Chaque entreprise doit posséder un identifiant interne stable.
+
+Normaliser :
+- Nom.
+- Raison sociale.
+- Adresse.
+- Téléphone.
+- Domaine.
+- Catégorie.
+- Coordonnées géographiques.
+
+Détecter les doublons en croisant plusieurs signaux.
+
+Ne jamais fusionner automatiquement deux entreprises uniquement parce qu'elles ont un nom similaire.
+
+Conserver :
+- Sources originales.
+- Historique.
+- Dates.
+- Données contradictoires.
+- Niveau de confiance.
+
+Prévoir une interface de résolution manuelle des ambiguïtés.
+
+Les corrections manuelles ne doivent pas être écrasées silencieusement lors d'une nouvelle collecte.
+
+---
+
+# 8. FICHE ENTREPRISE
+
+Chaque entreprise doit pouvoir contenir :
+
+- Nom commercial.
+- Raison sociale.
+- Identifiant officiel si disponible.
+- Secteur.
+- Catégories.
+- Description.
+- Adresse.
+- Ville.
+- Code postal.
+- Canton.
+- Pays.
+- Coordonnées.
+- Téléphone professionnel.
+- E-mail professionnel public si utilisable légalement.
+- Site officiel.
+- Réseaux professionnels.
+- Statut d'activité.
+- Horaires.
+- Sources.
+- Dates de vérification.
+- Niveau de confiance.
+- Historique des modifications.
+
+Ne jamais remplacer une information inconnue par une supposition.
+
+Prévoir les états :
+- Vérifié.
+- Probable.
+- Inconnu.
+- Contradictoire.
+- Obsolète.
+
+---
+
+# 9. AUDIT WEB AVANCÉ
+
+## 9.1 Identification du site
+
+Déterminer si un site officiel a été identifié.
+
+Ne pas assimiler automatiquement « non trouvé » à « inexistant ».
+
+Vérifier :
+- Domaine.
+- Accessibilité.
+- HTTPS.
+- Redirections.
+- Erreurs HTTP.
+- Pages principales.
+
+## 9.2 Audit technique
+
+Lorsque possible, mesurer :
+- Performances.
+- Expérience mobile.
+- Structure HTML.
+- Balises title.
+- Meta descriptions.
+- Hiérarchie H1/H2.
+- Liens cassés sur un échantillon limité.
+- Indexabilité.
+- Robots.txt.
+- Sitemap.
+- Données structurées.
+- Problèmes d'accessibilité.
+- Erreurs techniques.
+- Indicateurs Lighthouse.
+
+Les mesures doivent être horodatées.
+
+Distinguer résultats observés et estimations.
+
+## 9.3 Analyse commerciale
+
+Identifier les problèmes susceptibles de justifier une prestation.
+
+Ne pas affirmer qu'un site ancien est nécessairement mauvais.
+
+Ne pas inventer :
+- Budget.
+- Chiffre d'affaires.
+- Intentions d'achat.
+- Difficultés commerciales.
+- Besoins non démontrés.
+
+Créer des constats accompagnés de preuves.
+
+---
+
+# 10. SCORING EXPLICABLE
+
+Créer un moteur déterministe configurable.
+
+Pondération initiale proposée :
+
+- Besoin numérique : 40 %.
+- Potentiel commercial : 25 %.
+- Accessibilité : 20 %.
+- Fiabilité : 15 %.
+
+Ces valeurs constituent des hypothèses initiales, non des probabilités validées.
+
+Afficher :
+- Score global.
+- Sous-scores.
+- Critères.
+- Justifications.
+- Sources.
+- Incertitudes.
+- Données manquantes.
+
+Ne pas attribuer artificiellement un excellent score à une entreprise dont les données sont insuffisantes.
+
+Permettre :
+- Modification des pondérations.
+- Recalcul.
+- Comparaison.
+- Classement.
+- Ajustement futur à partir des conversions réelles.
+
+---
+
+# 11. HORAIRES D'OUVERTURE ET D'APPEL
+
+Fonctionnalité obligatoire.
+
+## 11.1 Catégories
+
+Distinguer :
+
+1. Horaires d'appel explicitement publiés.
+2. Horaires d'ouverture.
+3. Horaires inconnus.
+4. Horaires exceptionnellement modifiés.
+
+Chaque plage doit contenir :
+- Jour.
+- Début.
+- Fin.
+- Type.
+- Fuseau horaire.
+- Source.
+- Date de vérification.
+- Fiabilité.
+
+Prendre en charge les pauses de midi, les horaires fractionnés, les fermetures exceptionnelles et les plages traversant minuit.
+
+## 11.2 Priorité
+
+Les horaires de contact téléphonique publiés priment.
+
+À défaut, les horaires d'ouverture peuvent servir d'indication.
+
+Ne jamais présenter des horaires d'ouverture comme une garantie de disponibilité au téléphone.
+
+## 11.3 Filtres
+
+Permettre :
+- Jour précis.
+- Plusieurs jours.
+- Heure précise.
+- Plage horaire.
+- Matin.
+- Après-midi.
+- Soir.
+- Horaires d'appel confirmés.
+- Horaires d'ouverture connus.
+- Horaires inconnus.
+
+Combiner ces filtres avec les scores, secteurs, régions, campagnes et statuts CRM.
+
+---
+
+# 12. CRM COMPLET ET LÉGER
+
+## 12.1 Statuts
+
+Prévoir :
+- Nouveau.
+- À qualifier.
+- Qualifié.
+- À appeler.
+- Appel planifié.
+- Contacté.
+- Sans réponse.
+- À relancer.
+- Intéressé.
+- Rendez-vous convenu.
+- Devis à préparer.
+- Devis envoyé.
+- Négociation.
+- Client.
+- Refusé.
+- Ne plus contacter.
+- Archivé.
+
+## 12.2 Activités
+
+Permettre :
+- Notes.
+- Historique des appels.
+- Résultat d'appel.
+- Rappels.
+- Relances.
+- Changement de statut.
+- Devis.
+- Montants.
+- Opportunités.
+- Conversion.
+- Motif de refus.
+
+Chaque activité doit être horodatée.
+
+## 12.3 Statistiques
+
+Calculer :
+- Nombre d'appels.
+- Taux de réponse.
+- Taux d'intérêt.
+- Taux de conversion.
+- Nombre de clients.
+- Valeur des devis.
+- Valeur des ventes déclarées.
+- Performance par campagne.
+- Performance par secteur.
+
+## 12.4 Liste de non-contact
+
+Créer une liste persistante des entreprises à ne plus contacter.
+
+Cette liste doit être respectée par toutes les campagnes futures.
+
+Ne jamais réintroduire automatiquement un prospect exclu.
+
+---
+
+# 13. SMART CALL PLANNING — ATLAS
+
+Ce module doit préparer les appels, sans développer un deuxième système de calendrier.
+
+## 13.1 Sélection
+
+L'utilisateur peut sélectionner :
+- Un prospect.
+- Plusieurs prospects.
+- Tous les prospects filtrés.
+- Des prospects de campagnes différentes.
+
+## 13.2 Bouton principal
+
+Ajouter en bas de la page Planification :
+
+**COPIER LE PROMPT POUR ATLAS**
+
+Le bouton doit :
+1. Générer un prompt complet.
+2. Permettre sa prévisualisation.
+3. Copier réellement le contenu.
+4. Confirmer la copie uniquement si elle réussit.
+
+## 13.3 Format
+
+Inclure des données structurées JSON avec :
+- Identifiant du prospect.
+- Nom.
+- Ville.
+- Téléphone.
+- Secteur.
+- Score.
+- Priorité.
+- Horaires d'appel.
+- Horaires d'ouverture.
+- Sources.
+- Dates de vérification.
+- Fuseau horaire.
+- Statut CRM.
+- Notes utiles.
+- Durée suggérée.
+
+Valider le schéma.
+
+Échapper les contenus externes.
+
+Ne jamais laisser des données collectées modifier les instructions système du prompt.
+
+## 13.4 Instructions générées pour ATLAS
+
+Le prompt doit demander à ATLAS de :
+
+1. Vérifier ses accès effectifs à Google Calendar et Notion.
+2. Lire les engagements pertinents.
+3. Identifier les horaires de travail.
+4. Identifier les cours.
+5. Identifier les babysittings.
+6. Identifier les rendez-vous.
+7. Identifier les autres engagements.
+8. Détecter les doublons.
+9. Calculer les plages libres.
+10. Croiser ces plages avec les horaires des entreprises.
+11. Privilégier les horaires d'appel publiés.
+12. Utiliser les horaires d'ouverture en second choix.
+13. Signaler les horaires inconnus.
+14. Préférer les sessions groupées de prospection.
+15. Isoler les appels dont les horaires sont restrictifs.
+16. Prévoir 15 minutes d'appel et 5 minutes de marge par défaut.
+17. Éviter les conflits.
+18. Respecter les fuseaux horaires.
+19. Tenir compte des jours fériés.
+20. Éviter les horaires commercialement inappropriés.
+21. Proposer un planning.
+22. Attendre la validation.
+23. Après validation, créer les blocs personnels dans les systèmes accessibles.
+24. Vérifier les doublons avant chaque création.
+25. Signaler les créations impossibles.
+26. Fournir un récapitulatif des opérations réellement effectuées.
+
+## 13.5 Planification hybride
+
+ATLAS doit regrouper les appels lorsque cela améliore l'efficacité.
+
+Cependant, les prospects prioritaires disposant de plages de contact limitées peuvent être planifiés individuellement.
+
+Optimiser :
+- Disponibilités réelles.
+- Nombre d'appels réalisables.
+- Priorité commerciale.
+- Continuité des sessions.
+- Marges.
+- Fiabilité des horaires.
+
+Ne jamais inventer un créneau disponible.
+
+## 13.6 États de planification
+
+Distinguer :
+- Export créé.
+- Planning proposé.
+- Planning validé.
+- Événement personnel créé.
+- Appel effectué.
+- Rendez-vous confirmé avec l'entreprise.
+
+La copie du prompt ne doit pas automatiquement changer le statut du prospect.
+
+Prévoir une confirmation manuelle des événements créés, ou un futur import structuré.
+
+---
+
+# 14. RECHERCHE, FILTRES ET EXPORTS
+
+Prévoir une recherche globale.
+
+Filtres :
+- Région.
+- Ville.
+- Secteur.
+- Score.
+- Opportunité.
+- Statut CRM.
+- Horaires.
+- Source.
+- Fiabilité.
+- Date d'analyse.
+- Campagne.
+
+Tri :
+- Score.
+- Nom.
+- Ville.
+- Priorité.
+- Date de découverte.
+- Date de vérification.
+- Horaires.
+
+Exports :
+- CSV.
+- JSON.
+- Prompt ATLAS.
+
+Respecter la sélection et les filtres actifs.
+
+---
+
+# 15. GESTION DES COÛTS
+
+L'application doit fonctionner sans API IA.
+
+Les opérations classiques doivent être privilégiées pour :
+- Collecte.
+- Normalisation.
+- Audit.
+- Scoring.
+- Filtres.
+- CRM.
+
+Prévoir :
+- Budget par campagne.
+- Estimation préalable.
+- Coûts mesurés.
+- Coûts estimés.
+- Cache.
+- Réutilisation des audits.
+- Désactivation des services payants.
+- Arrêt au plafond configurable.
+
+Ne jamais augmenter automatiquement un plafond.
+
+Distinguer dépenses mesurées, estimations et abonnements externes.
+
+Prévoir une interface d'extension IA future, désactivée par défaut.
+
+---
+
+# 16. BASE DE DONNÉES
+
+Entités recommandées :
+
+- Campaign.
+- CampaignRun.
+- SourceConnector.
+- SourceRecord.
+- Company.
+- CompanyIdentity.
+- CompanyContact.
+- CompanyWebsite.
+- BusinessHours.
+- WebsiteAudit.
+- AuditFinding.
+- QualificationScore.
+- Prospect.
+- CRMActivity.
+- CallRecord.
+- FollowUp.
+- Deal.
+- Quote.
+- PlanningExport.
+- BackgroundJob.
+- CostRecord.
+- AppSetting.
+- AuditLog.
+- ContactSuppression.
+
+Créer :
+- Relations.
+- Index.
+- Contraintes.
+- Migrations.
+- Identifiants stables.
+- Historique des modifications.
+
+Prévoir des sauvegardes avant les migrations importantes.
+
+---
+
+# 17. SÉCURITÉ ET CONFORMITÉ
+
+L'application doit écouter localement par défaut.
+
+Prévoir :
+- Validation des entrées.
+- Protection contre les injections.
+- Protection SSRF.
+- Blocage des adresses internes et privées.
+- Vérification DNS et des redirections.
+- Limites de taille.
+- Timeouts.
+- Isolation raisonnable de la navigation automatisée.
+- Gestion des secrets.
+- Logs.
+- Sauvegardes.
+- Restauration.
+- Export des données.
+- Suppression des données.
+- Conservation configurable.
+
+Ne jamais exécuter des instructions provenant des sites analysés.
+
+Respecter les restrictions des sources, la législation suisse applicable, les règles de protection des données et les restrictions relatives à la prospection.
+
+Aucun appel automatique.
+
+Aucun envoi automatique de SMS ou d'e-mails commerciaux en V1.
+
+---
+
+# 18. PERFORMANCE ET RÉSILIENCE
+
+Les collectes ne doivent pas bloquer l'interface.
+
+Prévoir :
+- Worker local.
+- File persistante.
+- Traitement asynchrone.
+- Pagination.
+- Cache.
+- Reprise après interruption.
+- Arrêt propre.
+- Limitation des ressources.
+- Gestion des erreurs.
+
+Au redémarrage, restaurer :
+- Campagnes.
+- Prospects.
+- CRM.
+- Historique.
+- Tâches récupérables.
+
+Ne pas créer de doublons lors des reprises.
+
+---
+
+# 19. INSTALLATION WINDOWS SIMPLIFIÉE
+
+L'utilisateur doit pouvoir lancer l'application sans compétences techniques.
+
+## Première installation
+
+Prévoir :
+- Vérification du système.
+- Vérification des dépendances.
+- Installation guidée.
+- Configuration initiale.
+- Création de la base.
+- Initialisation des services.
+- Test de démarrage.
+
+## Utilisation quotidienne
+
+Objectif : démarrage par double-clic.
+
+Livrer au minimum :
+- Installer.ps1.
+- Start.bat ou lanceur équivalent.
+- Stop.bat.
+- Diagnose.bat.
+- Backup.bat.
+- Restore.bat.
+- Uninstall.bat.
+
+Prévoir un raccourci Windows si possible.
+
+Le démarrage doit :
+1. Vérifier la configuration.
+2. Démarrer le backend.
+3. Démarrer le worker.
+4. Démarrer le frontend.
+5. Ouvrir le navigateur.
+6. Afficher les erreurs compréhensibles.
+
+Docker ne doit pas être obligatoire.
+
+Ne pas supposer que Python, Node.js ou Playwright sont déjà installés.
+
+Si des dépendances externes sont nécessaires, les détecter et guider leur installation.
+
+Ne jamais supprimer les données lors d'une mise à jour ou désinstallation sans confirmation explicite.
+
+Prévoir une page Diagnostics indiquant :
+- Backend.
+- Base de données.
+- Worker.
+- Connecteurs.
+- Dernières erreurs.
+
+---
+
+# 20. GESTION DES ERREURS
+
+Chaque erreur importante doit fournir :
+- Description compréhensible.
+- Composant concerné.
+- Date.
+- Identifiant de diagnostic.
+- Action recommandée lorsque possible.
+
+Conserver des logs détaillés.
+
+Une campagne ayant échoué ne doit pas être affichée comme réussie.
+
+Une source indisponible doit être signalée sans bloquer les autres sources.
+
+---
+
+# 21. TESTS AUTOMATISÉS
+
+## Tests unitaires
+
+Tester :
+- Normalisation.
+- Dédoublonnage.
+- Scoring.
+- Horaires.
+- Filtres.
+- Coûts.
+- Export ATLAS.
+- Validation des données.
+
+## Tests d'intégration
+
+Tester :
+- API.
+- Base de données.
+- Migrations.
+- Connecteurs.
+- Worker.
+- Pipeline.
+- CRM.
+- Sauvegardes.
+
+## Tests de bout en bout
+
+Tester :
+- Installation.
+- Démarrage.
+- Campagne.
+- Collecte réelle.
+- Enrichissement.
+- Audit.
+- Qualification.
+- Filtrage.
+- Sélection.
+- Export.
+- Copie du prompt.
+- CRM.
+- Redémarrage.
+- Restauration.
+
+Distinguer les tests simulés des tests sur des services réels.
+
+Les tests avec mocks ne suffisent pas à prouver qu'un connecteur externe fonctionne.
+
+---
+
+# 22. SCÉNARIO DE RECETTE OBLIGATOIRE
+
+Créer un scénario reproductible :
+
+1. Installer Prospect Engine.
+2. Lancer l'application.
+3. Créer une campagne ciblant le canton de Vaud.
+4. Découvrir de véritables entreprises via une source autorisée.
+5. Enrichir leurs informations.
+6. Identifier les sites officiels disponibles.
+7. Effectuer les audits.
+8. Afficher les constats et sources.
+9. Classer les prospects.
+10. Filtrer par jour et horaires.
+11. Sélectionner plusieurs entreprises.
+12. Générer le prompt ATLAS.
+13. Copier le prompt.
+14. Vérifier le contenu.
+15. Modifier un statut CRM.
+16. Enregistrer un appel.
+17. Créer un rappel.
+18. Fermer l'application.
+19. Redémarrer.
+20. Vérifier la persistance.
+21. Sauvegarder.
+22. Restaurer.
+23. Exécuter les tests automatisés.
+
+Si le développement ne se déroule pas sur Windows, ne pas prétendre avoir testé l'installation Windows.
+
+Fournir une procédure de validation Windows à exécuter sur la machine cible.
+
+---
+
+# 23. ORGANISATION DU DÉVELOPPEMENT
+
+Développer par jalons.
+
+## Jalon 1 — Fondations
+
+- Architecture.
+- Backend.
+- Frontend.
+- Base de données.
+- Migrations.
+- Scripts Windows.
+- Configuration.
+- Tests initiaux.
+
+## Jalon 2 — Collecte
+
+- Connecteurs.
+- Premier connecteur réel.
+- Normalisation.
+- Dédoublonnage.
+- Campagnes.
+- Worker.
+- Progression.
+
+## Jalon 3 — Audit
+
+- Détection des sites.
+- Audit avancé.
+- Sources.
+- Scoring.
+- Classement.
+
+## Jalon 4 — CRM
+
+- Fiches.
+- Statuts.
+- Notes.
+- Historique.
+- Appels.
+- Rappels.
+- Devis.
+- Statistiques.
+
+## Jalon 5 — Planification
+
+- Horaires.
+- Filtres temporels.
+- Sélection.
+- Export JSON.
+- Prompt ATLAS.
+- Copie.
+- Tests.
+
+## Jalon 6 — Livraison
+
+- Sécurité.
+- Optimisation.
+- Sauvegardes.
+- Tests.
+- Installation.
+- Documentation.
+- ZIP.
+
+Après chaque jalon :
+- Exécuter les tests.
+- Corriger les erreurs.
+- Documenter.
+- Indiquer ce qui fonctionne.
+- Indiquer les limites.
+- Préparer la suite.
+
+Ne pas considérer la V1 terminée tant que les critères essentiels ne sont pas validés.
+
+---
+
+# 24. LIVRABLES
+
+Fournir :
+
+1. Code source complet.
+2. Frontend fonctionnel.
+3. Backend fonctionnel.
+4. Base de données et migrations.
+5. Connecteurs réels.
+6. Pipeline de collecte.
+7. Moteur d'audit.
+8. Scoring.
+9. CRM.
+10. Smart Call Planning.
+11. Scripts Windows.
+12. Tests.
+13. Documentation.
+14. Guide utilisateur.
+15. Guide d'installation.
+16. Rapport de validation.
+17. Archive ZIP.
+
+Documents obligatoires :
+- README.md.
+- INSTALLATION_WINDOWS.md.
+- USER_GUIDE.md.
+- ARCHITECTURE.md.
+- CONNECTORS.md.
+- SECURITY.md.
+- TEST_REPORT.md.
+- KNOWN_LIMITATIONS.md.
+- CHANGELOG.md.
+
+Ne pas inclure :
+- Clés API.
+- Secrets.
+- Données personnelles réelles de test.
+- Environnements virtuels inutiles.
+- Fichiers temporaires.
+- Dépendances volumineuses réinstallables.
+
+Si un installateur autonome Windows fiable peut être produit, le fournir.
+
+Sinon, fournir une installation guidée réellement fonctionnelle et documenter la limitation.
+
+---
+
+# 25. RAPPORT FINAL
+
+À la fin du développement, fournir :
+
+- Architecture implémentée.
+- Technologies utilisées.
+- Fonctionnalités opérationnelles.
+- Fonctionnalités partielles.
+- Fonctionnalités absentes.
+- Connecteurs réels.
+- Restrictions des sources.
+- Tests exécutés.
+- Résultats des tests.
+- Instructions d'installation.
+- Coûts éventuels.
+- Problèmes connus.
+- Recommandations V1.1.
+- Préparation SaaS.
+
+Ne jamais masquer un échec.
+
+Ne jamais présenter une simulation comme une fonctionnalité réelle.
+
+---
+
+# 26. CRITÈRE ULTIME DE RÉUSSITE
+
+La question déterminante est :
+
+**Un utilisateur non développeur peut-il installer Prospect Engine sur Windows, rechercher de véritables entreprises, analyser leurs opportunités, consulter leurs horaires, préparer ses appels avec ATLAS et gérer son activité commerciale sans toucher au code ?**
+
+Si la réponse est non, la livraison est incomplète.
+
+Le développement doit produire un outil commercial utilisable, pas une démonstration.
+
+---
+
+# 27. INSTRUCTION D'EXÉCUTION FINALE
+
+Tu dois maintenant développer Prospect Engine V1.
+
+Commence par :
+1. Examiner le workspace et les outils disponibles.
+2. Vérifier les dépendances.
+3. Vérifier les contraintes des sources de données.
+4. Définir l'architecture effective.
+5. Développer le premier jalon.
+6. Exécuter les tests.
+7. Continuer progressivement.
+
+Tu peux poursuivre automatiquement entre les jalons lorsque les tests passent et qu'aucune décision bloquante n'est nécessaire.
+
+Si une limitation empêche une fonctionnalité, implémente ce qui est possible, documente précisément le blocage et ne crée aucune simulation trompeuse.
+
+**Priorité absolue : livrer une application fonctionnelle, fiable, installable et maintenable.**
+
+Commence le développement immédiatement.

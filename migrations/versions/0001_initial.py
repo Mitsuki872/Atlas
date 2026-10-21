@@ -1,0 +1,81 @@
+"""Initial immutable schema (v0.1)."""
+from alembic import op
+import sqlalchemy as sa
+revision='0001'
+down_revision=None
+branch_labels=None
+depends_on=None
+def upgrade():
+    op.create_table('campaigns',
+        sa.Column('id',sa.String(length=36),primary_key=True,nullable=False),
+        sa.Column('name',sa.String(length=200),primary_key=False,nullable=False),
+        sa.Column('config',sa.JSON(),primary_key=False,nullable=False),
+        sa.Column('state',sa.String(length=30),primary_key=False,nullable=False),
+        sa.Column('progress',sa.JSON(),primary_key=False,nullable=False),
+        sa.Column('error',sa.Text(),primary_key=False,nullable=True),
+        sa.Column('created_at',sa.String(),primary_key=False,nullable=False),
+    )
+    op.create_index('ix_campaigns_state','campaigns',['state'],unique=False)
+    op.create_table('companies',
+        sa.Column('id',sa.String(length=36),primary_key=True,nullable=False),
+        sa.Column('identity',sa.String(),primary_key=False,nullable=False,unique=True),
+        sa.Column('name',sa.String(length=300),primary_key=False,nullable=False),
+        sa.Column('city',sa.String(length=200),primary_key=False,nullable=False),
+        sa.Column('sector',sa.String(length=100),primary_key=False,nullable=False),
+        sa.Column('phone',sa.String(length=100),primary_key=False,nullable=False),
+        sa.Column('website',sa.String(length=2000),primary_key=False,nullable=False),
+        sa.Column('status',sa.String(length=50),primary_key=False,nullable=False),
+        sa.Column('suppressed',sa.Integer(),primary_key=False,nullable=False),
+        sa.Column('facts',sa.JSON(),primary_key=False,nullable=False),
+        sa.Column('audit',sa.JSON(),primary_key=False,nullable=False),
+        sa.Column('score',sa.JSON(),primary_key=False,nullable=False),
+        sa.Column('manual_fields',sa.JSON(),primary_key=False,nullable=False),
+        sa.Column('created_at',sa.String(),primary_key=False,nullable=False),
+        sa.Column('verified_at',sa.String(),primary_key=False,nullable=False),
+    )
+    op.create_index('ix_companies_city','companies',['city'],unique=False)
+    op.create_index('ix_companies_status','companies',['status'],unique=False)
+    op.create_index('ix_companies_name','companies',['name'],unique=False)
+    op.create_table('logs',
+        sa.Column('id',sa.String(length=36),primary_key=True,nullable=False),
+        sa.Column('component',sa.String(),primary_key=False,nullable=False),
+        sa.Column('message',sa.Text(),primary_key=False,nullable=False),
+        sa.Column('created_at',sa.String(),primary_key=False,nullable=False),
+    )
+    op.create_table('planning_exports',
+        sa.Column('id',sa.String(length=36),primary_key=True,nullable=False),
+        sa.Column('payload',sa.JSON(),primary_key=False,nullable=False),
+        sa.Column('state',sa.String(),primary_key=False,nullable=False),
+        sa.Column('created_at',sa.String(),primary_key=False,nullable=False),
+    )
+    op.create_table('settings',
+        sa.Column('key',sa.String(),primary_key=True,nullable=False),
+        sa.Column('value',sa.JSON(),primary_key=False,nullable=False),
+    )
+    op.create_table('activities',
+        sa.Column('id',sa.String(length=36),primary_key=True,nullable=False),
+        sa.Column('company_id',sa.String(length=36),sa.ForeignKey('companies.id'),primary_key=False,nullable=False),
+        sa.Column('kind',sa.String(length=40),primary_key=False,nullable=False),
+        sa.Column('text',sa.Text(),primary_key=False,nullable=False),
+        sa.Column('outcome',sa.String(length=100),primary_key=False,nullable=False),
+        sa.Column('due_at',sa.String(),primary_key=False,nullable=True),
+        sa.Column('amount',sa.Float(),primary_key=False,nullable=False),
+        sa.Column('created_at',sa.String(),primary_key=False,nullable=False),
+    )
+    op.create_index('ix_activities_due_at','activities',['due_at'],unique=False)
+    op.create_index('ix_activities_company_id','activities',['company_id'],unique=False)
+    op.create_table('jobs',
+        sa.Column('id',sa.String(length=36),primary_key=True,nullable=False),
+        sa.Column('campaign_id',sa.String(length=36),sa.ForeignKey('campaigns.id'),primary_key=False,nullable=False),
+        sa.Column('state',sa.String(length=30),primary_key=False,nullable=False),
+        sa.Column('cursor',sa.Integer(),primary_key=False,nullable=False),
+        sa.Column('records',sa.JSON(),primary_key=False,nullable=True),
+        sa.Column('created_at',sa.String(),primary_key=False,nullable=False),
+    )
+    op.create_index('ix_jobs_campaign_id','jobs',['campaign_id'],unique=False)
+    op.create_index('ix_jobs_state','jobs',['state'],unique=False)
+    op.create_table('memberships',
+        sa.Column('campaign_id',sa.String(length=36),sa.ForeignKey('campaigns.id'),primary_key=True,nullable=False),
+        sa.Column('company_id',sa.String(length=36),sa.ForeignKey('companies.id'),primary_key=True,nullable=False),
+    )
+def downgrade():raise RuntimeError('Destructive downgrade disabled; restore an explicit backup.')
