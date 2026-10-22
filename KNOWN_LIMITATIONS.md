@@ -1,13 +1,15 @@
-# Limites restantes — après le patch V1.1
+# Limites restantes — version 1.2
 
-Le patch qualité V1.1 met à jour la préversion existante. Il ne valide pas l’ensemble de la V1 initiale. Les filtres/contacts/scores/actions du patch sont implémentés et testés ; les limites ci-dessous restent explicites.
+La version 1.2 ajoute une découverte locale effectivement validée sur un extrait suisse réel. Elle ne valide pas l’ensemble de la V1 initiale ; les limites ci-dessous restent explicites.
 
 ## Sources et validations externes
 
 - Overpass reste non validé en collecte réelle dans ce cloud. Le diagnostic du 22 octobre 2026 répond HTTP 406. Les tests de connecteur utilisent des réponses contrôlées, sans prétendre à un accès externe réussi.
 - Les conditions/quotas actuels de chaque source doivent être vérifiés avant usage. Pas de contournement d’un blocage, de Nominatim systématique ou d’extraction massive via une instance publique. Zefix et les fournisseurs commerciaux ne sont pas implémentés.
-- Un seul connecteur de découverte Internet est implémenté. L’import JSON autorisé est opérationnel mais ne constitue pas une preuve de découverte externe. Pas d’import CSV ni d’extraits régionaux.
-- La sélection équilibrée utilise un pool borné par secteur, pas la totalité de la source. Le nombre disponible total reste inconnu, affiché comme tel. Le mode pertinence ordonne les contacts présents, pas l’intention d’achat. Une entreprise conserve un secteur principal pour le tableau et ses catégories sources ; une entreprise multi-catégories ne compte qu’une seule fois dans la sélection équilibrée. Les succursales nécessitent une revue manuelle.
+- La découverte utilise par défaut l’extrait suisse Geofabrik, téléchargé puis indexé localement ; Overpass reste une option explicite. Pas d’import CSV ni de registre commercial exhaustif. La source ne couvre que les objets nommés et les huit catégories actuelles ; les 3 fiches plomberie trouvées dans Vaud ne représentent pas le nombre réel de plombiers.
+- Premier téléchargement et mises à jour : Internet requis, environ 550 Mo et au moins 4 Go libres. Mise à jour manuelle, aucun nettoyage automatique des anciens fichiers/index. La préparation monopolise le worker ; les nouvelles campagnes attendent. Une indexation interrompue recommence depuis le début, le téléchargement peut reprendre.
+- Les 26 cantons sont indexés, mais le formulaire de campagne reste limité aux six cantons proposés. Le classement utilise les limites administratives et un point représentatif ; les géométries incomplètes/ambiguës sont écartées. Une commune géographique ne certifie pas une adresse postale.
+- La sélection équilibrée utilise un pool borné par secteur. Le total local est compté exactement dans l’index pour les critères demandés ; le total Overpass reste inconnu, affiché comme tel. Le mode pertinence ordonne les contacts présents, pas l’intention d’achat. Une entreprise conserve un secteur principal pour le tableau et ses catégories sources ; une entreprise multi-catégories ne compte qu’une seule fois dans la sélection équilibrée. Les succursales nécessitent une revue manuelle.
 - L’enrichissement exige confirmation humaine du caractère officiel du site et des droits de consultation/réutilisation. Il est limité à la page principale et deux liens contact du même site, sans redirection ni exécution JavaScript. Pas de découverte automatique de site officiel. Les coordonnées OSM restent déclaratives. Les e-mails personnels sont exclus de l’extraction web automatisée par une liste conservative de boîtes génériques ; celle-ci peut manquer des adresses professionnelles valides.
 - La normalisation téléphonique domestique reste orientée Suisse ; utiliser des numéros internationaux pour les entreprises étrangères. Syntaxe et normalisation ne prouvent pas la joignabilité.
 
@@ -24,7 +26,7 @@ Le patch qualité V1.1 met à jour la préversion existante. Il ne valide pas l�
 ## Installation et fonctionnalités V1 initiales
 
 - Installation Windows, raccourci et scripts PowerShell/Batch non exécutés sur Windows. Pas de binaire autonome signé. La logique Python partagée est testée sur Linux ; suivre la recette cible dans INSTALLATION_WINDOWS.md.
-- La recette obligatoire sur de vraies entreprises de Vaud et sur Windows demeure incomplète. Aucun test avec fixtures n’est présenté comme preuve de cette recette.
+- La découverte locale sur de vraies données de Vaud et trois campagnes hors ligne sont validées sur Linux (rapport agrégé dans docs/LOCAL_OSM_REAL_VALIDATION.json). La recette sur Windows demeure à exécuter ; le téléchargement des dépendances Windows ne vaut pas validation de leur exécution.
 - Frontend léger HTML/CSS/JavaScript, pas de Next.js/TypeScript : choix documenté, pas de reconstruction dans ce patch.
 - Campagnes limitées aux cantons/secteurs suisses disponibles : pas de rayon, pays configurable, géocodage, fournisseurs payants ou profondeur libre. Enrichissement par campagne optionnel et autorisé explicitement.
 - Pas de fusion manuelle des doublons, ni de résolution exhaustive des contradictions champ par champ. Les corrections manuelles et les déclarations de fiches distinctes sont conservées. Aucune fusion sur simple nom.
@@ -35,4 +37,4 @@ Le patch qualité V1.1 met à jour la préversion existante. Il ne valide pas l�
 - PostgreSQL/SaaS/multi-tenant/facturation non développés. Ne pas exposer l’application sur Internet.
 - Une instance par machine. Pause/arrêt attendent la fin de l’entreprise en cours ; le worker ne conserve plus de transaction d’écriture pendant les accès réseau. Son heartbeat peut afficher « occupé depuis plus de 90 s » durant une longue campagne.
 
-Voir PATCH_V1_1.md pour les changements et TEST_REPORT.md pour les validations effectives.
+Voir LOCAL_OSM_GUIDE.md et PATCH_V1_1.md pour les changements et TEST_REPORT.md pour les validations effectives.

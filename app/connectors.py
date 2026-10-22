@@ -15,8 +15,9 @@ class Connector(Protocol):
 
 def choose_records(records,sectors,limit,mode):
     """Bounded candidates; relevance is transparent contact completeness, not purchase intent."""
-    ranked=sorted(records,key=lambda r:sum(bool(r.get(k)) for k in ('phone','email','website')),reverse=True)
-    if mode=='relevance':return ranked[:limit]
+    eligible=[r for r in records if any(s in r.get('facts',{}).get('categories',[r['sector']]) for s in sectors)]
+    ranked=sorted(eligible,key=lambda r:sum(bool(r.get(k)) for k in ('phone','email','website')),reverse=True)
+    if mode=='relevance':return [{**r,'sector':next(s for s in sectors if s in r.get('facts',{}).get('categories',[r['sector']]))} for r in ranked[:limit]]
     queues={s:deque(r for r in ranked if s in r.get('facts',{}).get('categories',[r['sector']])) for s in sectors}
     chosen=[];used=set()
     while len(chosen)<limit:

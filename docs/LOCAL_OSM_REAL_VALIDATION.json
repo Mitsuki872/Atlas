@@ -1,0 +1,42 @@
+{
+  "validated_at": "2026-10-22T05:02:23.873635+00:00",
+  "source_url": "https://download.geofabrik.de/europe/switzerland-261020.osm.pbf",
+  "snapshot_at": "2026-10-20T20:23:47+00:00",
+  "provider_md5": "a169a37219e94927cf6d92e81df40dd4",
+  "sha256": "8e2d91fab19a65898fa6b8e56d51f4a14952110c7bfcb2a495fd02911931a0b0",
+  "download_bytes": 548888071,
+  "indexed_businesses": 32275,
+  "canton_boundaries": 26,
+  "municipal_boundaries": 2139,
+  "indexing_seconds": 38.95,
+  "vaud_candidates": {
+    "restaurant": {
+      "available_total": 1557,
+      "returned_candidates": 1557,
+      "selected": 9,
+      "candidate_pool_may_be_truncated": false
+    },
+    "plumber": {
+      "available_total": 3,
+      "returned_candidates": 3,
+      "selected": 3,
+      "candidate_pool_may_be_truncated": false
+    }
+  },
+  "selected": 12,
+  "selected_contact_counts": {
+    "phone": 12,
+    "email": 9,
+    "website": 11
+  },
+  "offline_network_disabled": true,
+  "campaign_runs_completed": 3,
+  "no_duplicates_on_rerun": true,
+  "manual_correction_preserved": true,
+  "crm_note_persisted": true,
+  "suppression_preserved": true,
+  "atlas_export_validated": true,
+  "audits_executed": false,
+  "windows_executed": false,
+  "attribution": "© OpenStreetMap contributors — ODbL ; extrait Geofabrik"
+}

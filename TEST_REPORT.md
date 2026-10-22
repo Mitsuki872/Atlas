@@ -1,3 +1,19 @@
+# Validation — version 1.2 — copie suisse locale
+
+**102 tests backend réussis, zéro échec, zéro ignoré**, avec un avertissement de dépréciation Starlette/AnyIO. Syntaxe JavaScript et compilation Python vérifiées. Les tests supplémentaires couvrent téléchargement interrompu/Range, contrôle d’empreinte et cache corrompu, annulation, URL fixe, création atomique, parsing d’un PBF synthétique avec géométries administratives, coordonnées manquantes, recherche communale, conservation du CRM et corrections plus récentes.
+
+**Essai réel distinct des fixtures :** téléchargement HTTPS Geofabrik de 548 888 071 octets, contrôle du MD5 fournisseur et calcul SHA-256, lecture du PBF daté du 20 octobre 2026, index final construit en 38,95 s sur cette machine Linux. 32 275 objets nommés dans huit catégories, 26 cantons, 2 139 communes. Vaud : 1 557 restaurants et 3 fiches plomberie selon les tags indexés, sans prétention d’exhaustivité.
+
+`scripts/validate_local_real.py` a exécuté trois campagnes via le vrai worker et une API sur base temporaire, réseau désactivé : sélection de 12 vraies fiches (9 restaurants, 3 plomberie), non-duplication, correction manuelle, note CRM, exclusion et export ATLAS vérifiés. Les audits/enrichissements étaient désactivés. Aucun contact envoyé. Le rapport agrégé sans coordonnées est dans `docs/LOCAL_OSM_REAL_VALIDATION.json` avec provenance, empreintes et résultats. Le ZIP n’inclut pas ces données réelles.
+
+Un essai supplémentaire backend + worker démarrés via le lanceur a préparé une copie par l’API et terminé en réutilisant le fichier vérifié en cache. Le scénario navigateur contrôle le CRM, les filtres, la préparation/progression/annulation avec réponses UI explicitement contrôlées (pas un nouveau téléchargement réel), et les diagnostics Overpass précédents.
+
+Les dépendances binaires Windows Python 3.12 amd64 ont été téléchargées avec succès. **Aucune exécution Windows effectuée.** Overpass reste indisponible depuis ce cloud ; la copie locale évite cet appel. Aucune mesure Lighthouse réelle revendiquée. Migration additive 0004 avec sauvegarde préalable ; fichiers OSM séparés du CRM.
+
+Les rapports ci-dessous sont historiques et décrivent les versions antérieures.
+
+---
+
 # Validation complémentaire — 1.1.2
 
 **83 tests backend réussis, zéro échec et zéro ignoré** (avertissement Starlette/AnyIO conservé). Douze cas supplémentaires vérifient la requête Vaud/restaurants/plomberie, la mémoire distincte, le GET, le filtre administratif communal et l’échappement de son nom, le contrôle de l’aire confirmée, les candidats sans addr:city, les réponses minimales 200/502/406, le délai partagé et la persistance du résultat de diagnostic. Les réponses utilisées par ces tests sont contrôlées ; aucun 200 de fixture ne prouve un rétablissement réel.

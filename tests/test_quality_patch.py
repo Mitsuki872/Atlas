@@ -190,7 +190,7 @@ def test_worker_network_does_not_lock_out_manual_corrections(client,monkeypatch)
     record=Connector().discover({})[0]
     with Session() as db:
         c=Company(**record);db.add(c);db.flush();company_id=c.id
-        campaign=Campaign(name='Concurrency',config=CampaignInput(name='Concurrency').model_dump(),state='running');db.add(campaign);db.flush();job=Job(campaign_id=campaign.id);db.add(job);db.commit();job_id=job.id
+        campaign=Campaign(name='Concurrency',config=CampaignInput(name='Concurrency',audit_web=True).model_dump(),state='running');db.add(campaign);db.flush();job=Job(campaign_id=campaign.id);db.add(job);db.commit();job_id=job.id
     def controlled_audit(url):
         r=client.patch('/api/companies/'+company_id,json={'phone':'+41210000009','website':'https://new.example.org'})
         assert r.status_code==200 # Would fail/lock if the worker held a write transaction.

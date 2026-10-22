@@ -1,5 +1,7 @@
 # Guide utilisateur
 
+**V1.2 :** la source par défaut est la copie OSM locale. Préparer d’abord l’annuaire suisse via le bouton du Dashboard/Campagnes/Paramètres, puis lancer les campagnes. Les anciennes campagnes sans source explicite passent au local pour leur prochaine découverte ; leurs résultats et le CRM sont conservés. L’audit est optionnel et désactivé par défaut pour les nouvelles campagnes. Guide pas à pas : LOCAL_OSM_GUIDE.md.
+
 **V1.1 :** consulter [PATCH_V1_1.md](PATCH_V1_1.md) pour les filtres de contact persistants dans l’URL, la provenance, les actions rapides et les deux scores. Les explications ci-dessous sont complétées par cette mise à jour.
 
 ## Premiers pas

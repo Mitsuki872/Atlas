@@ -1,3 +1,7 @@
+# Source principale V1.2 — copie suisse locale
+
+Téléchargement réel et vérifié depuis Geofabrik, index administratif local et campagnes hors réseau validés. Voir LOCAL_OSM_GUIDE.md et docs/LOCAL_OSM_REAL_VALIDATION.json. La source par défaut n’appelle plus Overpass. Le nombre total de candidats est connu dans cet index, sans prétendre à un recensement complet. ODbL et attribution obligatoires. Les descriptions Overpass ci-dessous concernent désormais l’option distante et les versions historiques.
+
 # Actualisation 1.1.2
 
 La requête utilise maintenant GET, officiellement pris en charge, et distingue les 64 Mio de mémoire de travail du serveur des 8 Mo maximum téléchargés. La commune est recherchée via son aire administrative de niveau 8 dans le canton ; une aire introuvable est signalée, sans recherche cantonale de remplacement. Un test manuel minimal est disponible dans Diagnostics. Depuis ce cloud, GET et POST reçoivent encore 406 ; aucun succès de collecte externe n’est affirmé. Voir PATCH_V1_1_2.md. Les descriptions de requêtes antérieures ci-dessous sont historiques.

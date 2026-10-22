@@ -93,3 +93,13 @@ class SourceRecord(Base):
     campaign_id: Mapped[str | None] = mapped_column(ForeignKey('campaigns.id'), index=True)
     payload: Mapped[dict] = mapped_column(JSON)
     collected_at: Mapped[str] = mapped_column(String, default=now)
+
+
+class DatasetJob(Base):
+    __tablename__='dataset_jobs'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    state: Mapped[str] = mapped_column(String(30),default='queued',index=True)
+    progress: Mapped[dict] = mapped_column(JSON,default=dict)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[str] = mapped_column(String,default=now)
+    updated_at: Mapped[str] = mapped_column(String,default=now)

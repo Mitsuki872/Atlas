@@ -7,3 +7,5 @@ beautifulsoup4==4.13.4
 pytest==8.3.5
 tzdata==2025.2
 psutil==7.0.0
+osmium==4.3.2
+shapely==2.1.2

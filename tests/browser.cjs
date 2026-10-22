@@ -7,6 +7,18 @@ const assert=require('node:assert/strict');
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:8765');
  await page.getByRole('heading',{name:'Votre prospection, au même endroit.'}).waitFor();
+ // UI-only lifecycle fixture. Actual Geofabrik/PBF validation runs separately.
+ let datasetState='none';
+ await page.route('**/api/dataset',async route=>route.fulfill({json:{ready:false,dataset:null,error:null,job:datasetState==='none'?null:{id:'fixture-preparation',state:datasetState,progress:{stage:'downloading',message:'Téléchargement de test contrôlé',bytes:4,total_bytes:10}},license:'https://example.com/test'}}));
+ await page.route('**/api/dataset/prepare',async route=>{datasetState='running';await route.fulfill({json:{id:'fixture-preparation',state:'queued'}});});
+ await page.route('**/api/dataset/fixture-preparation/cancel',async route=>{datasetState='cancelled';await route.fulfill({json:{state:'cancelled'}});});
+ await page.getByRole('button',{name:'Préparer la copie suisse',exact:true}).click();
+ await page.getByRole('button',{name:'Arrêter la préparation',exact:true}).waitFor();
+ assert.equal(await page.locator('#dataset-panel progress').getAttribute('value'),'4');
+ await page.getByRole('button',{name:'Arrêter la préparation',exact:true}).click();await page.getByRole('button',{name:'Préparer la copie suisse',exact:true}).waitFor();
+ await page.unroute('**/api/dataset');await page.unroute('**/api/dataset/prepare');await page.unroute('**/api/dataset/fixture-preparation/cancel');
+ console.log('PASS local preparation controls/progress/cancel (explicit UI-only fixture; no external download).');
+
  await page.getByRole('button',{name:'Nouvelle campagne'}).click();
  await page.locator('[name=name]').fill('QA navigateur — ne pas lancer');
  await page.getByRole('button',{name:'Enregistrer la campagne',exact:true}).click();

@@ -51,7 +51,7 @@ def test_retry_after_http_date_and_invalid():
 
 def create_job(state='running'):
     with Session() as db:
-        c=Campaign(name='Controlled source outage',config=CampaignInput(name='Controlled').model_dump(),state=state,progress={'discovered':2,'remaining':1});db.add(c);db.flush()
+        c=Campaign(name='Controlled source outage',config=CampaignInput(name='Controlled',data_source='osm-overpass').model_dump(),state=state,progress={'discovered':2,'remaining':1});db.add(c);db.flush()
         job=Job(campaign_id=c.id,cursor=1,records=[{'already':'stored'}]);db.add(job)
         db.add(Company(identity='preserved',name='Existing company',suppressed=1,manual_fields=['name']));db.commit()
         return c.id,job.id

@@ -11,14 +11,14 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from sqlalchemy import select, func, or_
-from app.db import Session, DATA, Campaign, Company, Membership, Activity, Job, Setting, Log, PlanningExport, SourceRecord, now, serialize
+from app.db import Session, DATA, Campaign, Company, Membership, Activity, Job, Setting, Log, PlanningExport, SourceRecord, DatasetJob, now, serialize
 from app.domain import CampaignInput, STATUSES, SECTORS, CANTONS, available, atlas_export, score_company
 from app.connectors import OverpassConnector
 from app.contacts import normalize_email, normalize_phone, normalize_website, contact, quality_score
 from app.filters import CompanyFilters, company_query
 from app.network import audit_capabilities
 
-app=FastAPI(title='Prospect Engine',version='1.1.2')
+app=FastAPI(title='Prospect Engine',version='1.2.0')
 STATIC=Path(__file__).parent/'static'
 TOKEN=secrets.token_urlsafe(32)
 @app.middleware('http')
@@ -77,7 +77,7 @@ def campaign_action(id:str,action:str):
         if action=='start':db.add(Job(campaign_id=c.id))
         if action=='resume':
             until=c.progress.get('source_retry_at')
-            if until and datetime.fromisoformat(until)>datetime.now(timezone.utc):raise HTTPException(409,'Délai Overpass en cours. Réessayez après '+until+' ; vos données sont conservées.')
+            if c.config.get('data_source','osm-local')=='osm-overpass' and until and datetime.fromisoformat(until)>datetime.now(timezone.utc):raise HTTPException(409,'Délai Overpass en cours. Réessayez après '+until+' ; vos données sont conservées.')
             c.error=None
             job=db.scalar(select(Job).where(Job.campaign_id==id).order_by(Job.created_at.desc()))
             if job:job.state='queued'
@@ -212,7 +212,7 @@ def diagnostics():
     with Session() as db:
         db.execute(select(1));heartbeat=db.get(Setting,'worker_heartbeat')
         alive=bool(heartbeat and datetime.fromisoformat(heartbeat.value['at'])>datetime.now(timezone.utc)-timedelta(seconds=90))
-        return {'backend':'ok','database':'ok','worker':'ok' if alive else 'absent ou occupé depuis plus de 90 s','data_directory':str(DATA),'connectors':[OverpassConnector.metadata,{'id':'zefix','status':'not_implemented','reason':'Conditions et accès non validés ; aucune extraction effectuée.'}],'last_overpass_probe':db.get(Setting,'last_overpass_probe').value if db.get(Setting,'last_overpass_probe') else None,'audit_capabilities':audit_capabilities(),'errors':[serialize(e) for e in db.scalars(select(Log).order_by(Log.created_at.desc()).limit(20))]}
+        return {'backend':'ok','database':'ok','worker':'ok' if alive else 'absent ou occupé depuis plus de 90 s','data_directory':str(DATA),'local_dataset':__import__('app.datasets',fromlist=['dataset_status']).dataset_status(),'connectors':[__import__('app.osm_local',fromlist=['LocalOSMConnector']).LocalOSMConnector.metadata,OverpassConnector.metadata,{'id':'zefix','status':'not_implemented','reason':'Conditions et accès non validés ; aucune extraction effectuée.'}],'last_overpass_probe':db.get(Setting,'last_overpass_probe').value if db.get(Setting,'last_overpass_probe') else None,'audit_capabilities':audit_capabilities(),'errors':[serialize(e) for e in db.scalars(select(Log).order_by(Log.created_at.desc()).limit(20))]}
 class Weights(BaseModel):
     model_config=ConfigDict(extra='forbid')
     need:int=Field(ge=0,le=100)
@@ -414,3 +414,29 @@ def overpass_probe():
             db.merge(Setting(key='overpass_not_before',value={'time':until}))
         db.commit()
     return result
+
+
+@app.get('/api/dataset')
+def local_dataset_status():
+    from app.datasets import dataset_status
+    return dataset_status()
+class PrepareDataset(BaseModel):
+    refresh:bool=False
+@app.post('/api/dataset/prepare')
+def prepare_dataset(data:PrepareDataset):
+    from app.datasets import dataset_status
+    status=dataset_status()
+    with Session() as db:
+        # Reserve a single preparation job, independent from campaign/CRM writes.
+        db.connection().exec_driver_sql('BEGIN IMMEDIATE')
+        active=db.scalar(select(DatasetJob).where(DatasetJob.state.in_(['queued','running'])))
+        if active:return serialize(active)
+        if status['ready'] and not data.refresh:return {'state':'completed','progress':{'stage':'ready','message':'Copie déjà prête.'}}
+        job=DatasetJob(progress={'stage':'queued','message':'Préparation en attente du worker.'});db.add(job);db.commit();return serialize(job)
+@app.post('/api/dataset/{id}/cancel')
+def cancel_dataset(id:str):
+    with Session() as db:
+        job=must(db,DatasetJob,id)
+        if job.state not in ('queued','running'):raise HTTPException(409,'Aucune préparation active à arrêter')
+        job.state='cancelled';job.updated_at=now();db.commit()
+        return {'state':'cancelled','message':'Arrêt demandé. La copie précédente et les téléchargements partiels sont conservés.'}

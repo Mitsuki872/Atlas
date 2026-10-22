@@ -15,7 +15,11 @@ Windows 10/11 64 bits, droits d’écriture dans le dossier extrait, navigateur 
 
 Si PowerShell bloque un fichier téléchargé : vérifier l’origine et le contenu de l’archive avant de débloquer les fichiers via leurs Propriétés. La commande utilise `RemoteSigned`, ne désactive pas globalement la politique d’exécution. Respecter les règles du poste géré ; demander à l’administrateur si nécessaire. Ne pas désactiver la vérification TLS pour installer les dépendances.
 
-## Mise à jour V1.1 sans perte de données
+## Mise à jour V1.2 : annuaire local
+
+Sauvegarder depuis Paramètres puis Stop.bat. Copier les fichiers sans supprimer `data`/`.venv`. **Relancer Install.bat**, car osmium et shapely sont de nouvelles dépendances. Sur une installation existante, Install.bat utilise directement Python et ne lance pas Installer.ps1 ; il arrête les services, installe les roues binaires, migre avec sauvegarde et teste le démarrage. Puis Start.bat → Préparer la copie suisse → attendre Copie locale prête. Prévoir environ 550 Mo de téléchargement et 4 Go libres. Voir LOCAL_OSM_GUIDE.md. La recette Windows elle-même reste non exécutée.
+
+## Mise à jour V1.1 sans perte de données (historique)
 
 Arrêter avec Stop.bat puis exécuter Backup.bat. Copier les nouveaux fichiers dans le dossier existant **sans supprimer ni remplacer `data`**. Relancer Install.bat : la migration 0003 est additive et précédée d’une sauvegarde cohérente automatique. Puis Start.bat et rechargement du navigateur. Les dépendances quotidiennes restent Python seulement. Voir [PATCH_V1_1.md](PATCH_V1_1.md) pour la procédure et les contrôles de contacts.
 

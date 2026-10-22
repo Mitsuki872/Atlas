@@ -18,7 +18,13 @@ class CampaignInput(BaseModel):
     max_prospects: int = Field(default=25,ge=1,le=100)
     min_score: int = Field(default=0,ge=0,le=100)
     budget: float = Field(default=0,ge=0,le=10000,allow_inf_nan=False)
-    audit_web: bool = True
+    data_source: str = 'osm-local'
+    @field_validator('data_source')
+    @classmethod
+    def source_valid(cls,v):
+        if v not in ('osm-local','osm-overpass'):raise ValueError('Source locale ou Overpass requise')
+        return v
+    audit_web: bool = False
     distribution: str = 'balanced'
     enrich_contacts: bool = False
     @field_validator('distribution')

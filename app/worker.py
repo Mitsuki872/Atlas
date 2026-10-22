@@ -3,7 +3,7 @@ import socket
 import threading
 import time
 from sqlalchemy import select
-from app.db import Session, Campaign, Company, Job, Membership, Setting, Log, SourceRecord, now
+from app.db import Session, Campaign, Company, Job, Membership, Setting, Log, SourceRecord, DatasetJob, now
 from app.connectors import OverpassConnector
 from app.source_errors import SourceError
 from app.domain import score_company, normalize_name
@@ -14,9 +14,13 @@ from app.enrichment import enrich_website,apply_enrichment
 stop_event=threading.Event()
 def progress():return {'discovered':0,'normalized':0,'duplicates':0,'enriched':0,'audited':0,'qualified':0,'errors':0,'remaining':0,'measured_cost_chf':0,'estimated_cost_chf':0}
 def process_job(job_id,connector=None):
-    connector=connector or OverpassConnector()
     with Session() as db:
         job=db.get(Job,job_id);campaign=db.get(Campaign,job.campaign_id)
+        if connector is None:
+            if campaign.config.get('data_source','osm-local')=='osm-local':
+                from app.osm_local import LocalOSMConnector
+                connector=LocalOSMConnector()
+            else:connector=OverpassConnector()
         if campaign.state!='running':return
         job.state='running';db.commit()
         if job.records is None:
@@ -73,14 +77,19 @@ def process_job(job_id,connector=None):
             p=dict(campaign.progress);p['normalized']+=1
             if not excluded:
                 company=db.scalar(select(Company).where(Company.identity==record['identity']))
+                is_new=company is None
                 if company:p['duplicates']+=1
                 else:company=Company(**record);db.add(company);db.flush()
                 if not company.suppressed:
                     db.add(SourceRecord(company_id=company.id,campaign_id=campaign.id,payload=record))
+                    incoming=record.get('facts',{}).get('checked_at','')
+                    prefer_incoming=is_new or not incoming or incoming>=company.verified_at
                     for key in ('name','city','canton','sector','phone','email','website','facts'):
-                        if key not in company.manual_fields and key in record:setattr(company,key,record[key])
+                        if prefer_incoming and key not in company.manual_fields and key in record:setattr(company,key,record[key])
                     saved={(c['kind'],c['value'],c.get('source')):c for c in company.contacts}
-                    for item in contacts:saved[(item['kind'],item['value'],item.get('source'))]=item
+                    for item in contacts:
+                        key=(item['kind'],item['value'],item.get('source'))
+                        if key not in saved or item.get('verified_at','')>=saved[key].get('verified_at',''):saved[key]=item
                     company.contacts=list(saved.values())
                     if company.website==website:
                         if audit and audit.get('checked_at','')>=company.audit.get('checked_at',''):company.audit=audit
@@ -90,7 +99,7 @@ def process_job(job_id,connector=None):
                     if company.audit.get('error'):p['errors']+=1
                     weights=db.get(Setting,'scoring')
                     company.score=score_company(company,weights.value if weights else None);company.quality_score=quality_score(company)
-                    company.verified_at=record.get('facts',{}).get('checked_at',company.verified_at)
+                    company.verified_at=incoming if is_new and incoming else max(company.verified_at,incoming)
                     if not db.get(Membership,(campaign.id,company.id)):db.add(Membership(campaign_id=campaign.id,company_id=company.id))
                     if company.score['total'] is not None and company.score['total']>=config['min_score']:p['qualified']+=1
             job.cursor+=1;p['remaining']=len(job.records)-job.cursor;campaign.progress=p
@@ -121,13 +130,19 @@ def run():
     except OSError:raise RuntimeError('Un worker fonctionne déjà (port local 8766).')
     with Session() as db:
         for job in db.scalars(select(Job).where(Job.state=='running')):job.state='queued'
+        for job in db.scalars(select(DatasetJob).where(DatasetJob.state=='running')):job.state='queued'
         db.commit()
     while not stop_event.is_set():
         with Session() as db:
             db.merge(Setting(key='worker_heartbeat',value={'at':now()}));db.commit()
             job=db.scalar(select(Job).join(Campaign).where(Job.state=='queued',Campaign.state=='running').order_by(Job.created_at))
             job_id=job.id if job else None
-        if job_id:
+            dataset_job=db.scalar(select(DatasetJob).where(DatasetJob.state=='queued').order_by(DatasetJob.created_at))
+            dataset_id=dataset_job.id if dataset_job else None
+        if dataset_id:
+            from app.datasets import run_dataset_job
+            run_dataset_job(dataset_id,stop_event)
+        elif job_id:
             try:process_job(job_id)
             except Exception as exc:
                 logging.exception('Campaign failed')

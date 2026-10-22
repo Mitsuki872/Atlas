@@ -1,5 +1,9 @@
 # Historique
 
+## 1.2.0 — copie OSM suisse locale
+
+Téléchargement Geofabrik vérifié et reprenable, index séparé atomique, cantons/communes par polygones OSM, découverte hors réseau par défaut, tâches persistantes de préparation avec progression/arrêt/reprise, migration additive 0004, conservation des identités/corrections et préférence aux contacts plus récents. Nouveaux boutons de préparation/actualisation ; audit désactivé par défaut sur les nouvelles campagnes, Overpass reste optionnel. Install.bat met à jour directement une .venv existante sans PowerShell. Validation sur vrai PBF suisse, trois campagnes locales et tests automatisés ; Windows reste non exécuté. Voir LOCAL_OSM_GUIDE.md.
+
 ## 1.1.2 — requête Overpass et diagnostic sur le poste cible
 
 Transport GET officiellement accepté par l’API ; mémoire de travail serveur à 64 Mio au lieu de 8 Mio, sans relever la limite de téléchargement ; filtre communal réellement envoyé à la source ; vérification du compteur d’aire et refus des aires non résolues. Nouveau test manuel minimal Overpass dans Diagnostics, avec délai partagé et sans changement automatique d’instance. Aucun schéma ni dépendance ajoutés. Voir PATCH_V1_1_2.md.
