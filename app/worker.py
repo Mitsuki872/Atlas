@@ -54,7 +54,7 @@ def process_job(job_id,connector=None):
             try:record['website']=normalize_website(record.get('website',''))
             except ValueError:record['website']=''
             excluded=any(normalize_name(x) in normalize_name(record['name']) for x in config['exclusions'] if x.strip())
-            if config.get('city') and normalize_name(config['city'])!=normalize_name(record['city']):excluded=True
+            if config.get('city') and not campaign.progress.get('distribution',{}).get('query_scope',{}).get('area_confirmed') and normalize_name(config['city'])!=normalize_name(record['city']):excluded=True
             existing=db.scalar(select(Company).where(Company.identity==record['identity']))
             suppressed=bool(existing and existing.suppressed)
             website=existing.website if existing and 'website' in existing.manual_fields else record['website']

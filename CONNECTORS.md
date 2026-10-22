@@ -1,3 +1,7 @@
+# Actualisation 1.1.2
+
+La requête utilise maintenant GET, officiellement pris en charge, et distingue les 64 Mio de mémoire de travail du serveur des 8 Mo maximum téléchargés. La commune est recherchée via son aire administrative de niveau 8 dans le canton ; une aire introuvable est signalée, sans recherche cantonale de remplacement. Un test manuel minimal est disponible dans Diagnostics. Depuis ce cloud, GET et POST reçoivent encore 406 ; aucun succès de collecte externe n’est affirmé. Voir PATCH_V1_1_2.md. Les descriptions de requêtes antérieures ci-dessous sont historiques.
+
 # Mise à jour V1.1
 
 Voir PATCH_V1_1.md pour les contacts normalisés, l’enrichissement de deux pages contact maximum, les reprises contrôlées et la sortie indépendante bornée par secteur. Les descriptions V0.1 ci-dessous sont historiques lorsque contredites par ce patch. Le diagnostic externe du 22 octobre retourne encore HTTP 406 ; aucun accès réel réussi revendiqué.

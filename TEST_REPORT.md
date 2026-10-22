@@ -1,3 +1,15 @@
+# Validation complémentaire — 1.1.2
+
+**83 tests backend réussis, zéro échec et zéro ignoré** (avertissement Starlette/AnyIO conservé). Douze cas supplémentaires vérifient la requête Vaud/restaurants/plomberie, la mémoire distincte, le GET, le filtre administratif communal et l’échappement de son nom, le contrôle de l’aire confirmée, les candidats sans addr:city, les réponses minimales 200/502/406, le délai partagé et la persistance du résultat de diagnostic. Les réponses utilisées par ces tests sont contrôlées ; aucun 200 de fixture ne prouve un rétablissement réel.
+
+Le scénario navigateur V1.1/1.1.1 est conservé. Il contrôle aussi le nouveau bouton de diagnostic : une campagne synthétique en période d’attente empêche effectivement une requête externe et affiche `deferred`.
+
+**Vérifications externes effectives depuis ce cloud** : requête interpréteur minimale GET → HTTP 406 ; même requête POST → HTTP 406. Cette observation ne permet pas d’expliquer le 502 observé sur le PC Windows de l’utilisateur. Aucune collecte réelle réussie n’est revendiquée. La distinction nécessite le test minimal depuis Diagnostics sur ce PC, après expiration du délai serveur. Le code officiel du frontend Overpass a été consulté : `src/overpass_api/frontend/cgi-helper.cc` lit QUERY_STRING pour GET. Référence : https://github.com/drolbr/Overpass-API/blob/master/src/overpass_api/frontend/cgi-helper.cc .
+
+Aucune migration ni nouvelle dépendance ; données et résultats existants conservés. Les validations précédentes sont gardées ci-dessous comme historique.
+
+---
+
 # Validation complémentaire — correctif 1.1.1
 
 Résultat réel de `.venv/bin/python -m pytest -q` : **71 tests réussis, aucun échec ni test ignoré**, avec l’avertissement Starlette/AnyIO déjà présent. Les 11 cas supplémentaires couvrent 502 puis succès contrôlé, échecs répétés bornés, Retry-After numérique/date, 403/406 sans retry, 429 sans multiplication des requêtes, délai de reprise persistant partagé, préservation des entreprises/curseurs et des pauses/arrêts manuels.

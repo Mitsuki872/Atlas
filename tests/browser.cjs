@@ -92,6 +92,8 @@ const assert=require('node:assert/strict');
  await page.goto('http://127.0.0.1:8765/#prospects?q=QA+pagination&sort=name');await page.getByRole('button',{name:'Suivant →'}).click();await page.waitForURL(/offset=50/);await page.reload();await page.locator('tbody tr').first().waitFor();assert.equal(await page.locator('tbody tr').count(),5);assert(locationTest(await page.url()));
  function locationTest(url){return url.includes('offset=50')&&url.includes('q=QA+pagination');}
  console.log('PASS V1.1: seven contact filters, combined canton/search, URL reload and pagination, tel/mailto, actual contact clipboard, contacted status, quick note/reminder, ATLAS selection, disabled missing contacts.');
+ await page.locator('nav a[href="#diagnostics"]').click();await page.getByRole('button',{name:'Tester l’accès à Overpass'}).click();await page.waitForFunction(()=>document.querySelector('#overpass-probe-result')?.textContent.includes('deferred'));
+ console.log('PASS minimal-source diagnostic UI: stored cooldown prevents an external request.');
  assert.deepEqual(errors,[]);
  console.log('PASS: campaign create/edit, CRM note/status, selection, ATLAS prompt, actual clipboard, sourced call hours, JSON import, backup, dashboard, mobile, no JS errors.');
  await browser.close();

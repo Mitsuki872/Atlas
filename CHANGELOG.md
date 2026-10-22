@@ -1,5 +1,9 @@
 # Historique
 
+## 1.1.2 — requête Overpass et diagnostic sur le poste cible
+
+Transport GET officiellement accepté par l’API ; mémoire de travail serveur à 64 Mio au lieu de 8 Mio, sans relever la limite de téléchargement ; filtre communal réellement envoyé à la source ; vérification du compteur d’aire et refus des aires non résolues. Nouveau test manuel minimal Overpass dans Diagnostics, avec délai partagé et sans changement automatique d’instance. Aucun schéma ni dépendance ajoutés. Voir PATCH_V1_1_2.md.
+
 ## 1.1.1 — erreurs temporaires Overpass
 
 Reprises bornées après 502/503/504/timeouts avec attente de 15 puis 30 secondes, respect de Retry-After et refus immédiat des accès interdits. Après épuisement des essais, message explicatif et délai persistant de cinq minutes minimum (ou plus si la source le demande). Le délai s’applique aux autres campagnes utilisant la même source. Une campagne en échec ne redémarre pas automatiquement. Pause/arrêt demandés pendant la découverte conservés. Aucune migration ni nouvelle dépendance. Voir PATCH_V1_1_1.md.

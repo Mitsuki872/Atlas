@@ -15,7 +15,7 @@ def mock_source(monkeypatch,statuses,headers=None):
     def handler(request):
         calls.append(request)
         status=statuses[min(len(calls)-1,len(statuses)-1)]
-        return httpx.Response(status,json={'elements':[]} if status==200 else {'error':'Controlled fixture'},headers=headers or {})
+        return httpx.Response(status,json={'elements':[{'type':'count','tags':{'total':'1','areas':'1'}}]} if status==200 else {'error':'Controlled fixture'},headers=headers or {})
     monkeypatch.setattr(module.httpx,'Client',lambda **kw:client(transport=httpx.MockTransport(handler),**kw))
     monkeypatch.setattr(module.time,'sleep',waits.append)
     return calls,waits
@@ -24,6 +24,7 @@ def test_502_then_success_bounded_retry(monkeypatch):
     calls,waits=mock_source(monkeypatch,[502,200])
     assert OverpassConnector().discover(CampaignInput(name='Fixture').model_dump())==[]
     assert len(calls)==2 and waits==[15]
+    assert all(r.method=='GET' and 'data' in r.url.params for r in calls)
 
 def test_repeated_502_explained_with_cooldown(monkeypatch):
     calls,waits=mock_source(monkeypatch,[502])

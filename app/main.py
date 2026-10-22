@@ -18,7 +18,7 @@ from app.contacts import normalize_email, normalize_phone, normalize_website, co
 from app.filters import CompanyFilters, company_query
 from app.network import audit_capabilities
 
-app=FastAPI(title='Prospect Engine',version='1.1.1')
+app=FastAPI(title='Prospect Engine',version='1.1.2')
 STATIC=Path(__file__).parent/'static'
 TOKEN=secrets.token_urlsafe(32)
 @app.middleware('http')
@@ -212,7 +212,7 @@ def diagnostics():
     with Session() as db:
         db.execute(select(1));heartbeat=db.get(Setting,'worker_heartbeat')
         alive=bool(heartbeat and datetime.fromisoformat(heartbeat.value['at'])>datetime.now(timezone.utc)-timedelta(seconds=90))
-        return {'backend':'ok','database':'ok','worker':'ok' if alive else 'absent ou occupé depuis plus de 90 s','data_directory':str(DATA),'connectors':[OverpassConnector.metadata,{'id':'zefix','status':'not_implemented','reason':'Conditions et accès non validés ; aucune extraction effectuée.'}],'audit_capabilities':audit_capabilities(),'errors':[serialize(e) for e in db.scalars(select(Log).order_by(Log.created_at.desc()).limit(20))]}
+        return {'backend':'ok','database':'ok','worker':'ok' if alive else 'absent ou occupé depuis plus de 90 s','data_directory':str(DATA),'connectors':[OverpassConnector.metadata,{'id':'zefix','status':'not_implemented','reason':'Conditions et accès non validés ; aucune extraction effectuée.'}],'last_overpass_probe':db.get(Setting,'last_overpass_probe').value if db.get(Setting,'last_overpass_probe') else None,'audit_capabilities':audit_capabilities(),'errors':[serialize(e) for e in db.scalars(select(Log).order_by(Log.created_at.desc()).limit(20))]}
 class Weights(BaseModel):
     model_config=ConfigDict(extra='forbid')
     need:int=Field(ge=0,le=100)
@@ -391,3 +391,26 @@ def audit_company(id:str,consent:EnrichmentConsent):
         c.audit=result;c.score=score_company(c,current_weights(db));c.quality_score=quality_score(c)
         db.add(SourceRecord(company_id=id,payload={'kind':'website-audit',**result}));db.commit()
         return result
+
+
+@app.post('/api/diagnostics/overpass')
+def overpass_probe():
+    import time
+    from app.connectors import probe_overpass
+    with Session() as db:
+        # Serialize reservation against other probes; do not hold the lock for the network request.
+        db.connection().exec_driver_sql('BEGIN IMMEDIATE')
+        cooldown=db.get(Setting,'overpass_not_before');last=db.get(Setting,'overpass_last_request')
+        not_before=max(cooldown.value['time'] if cooldown else 0,(last.value['time']+60) if last else 0)
+        if time.time()<not_before:
+            return {'state':'deferred','retry_at':datetime.fromtimestamp(not_before,timezone.utc).isoformat(),'message':'Le délai de la source doit être respecté avant ce test.'}
+        db.merge(Setting(key='overpass_last_request',value={'time':time.time()}));db.commit()
+    result=probe_overpass()
+    with Session() as db:
+        db.merge(Setting(key='last_overpass_probe',value=result))
+        if result.get('http_status') in (429,500,502,503,504) or result.get('retry_after',0)>0:
+            old=db.get(Setting,'overpass_not_before')
+            until=max(old.value['time'] if old else 0,time.time()+max(300,result.get('retry_after',0)))
+            db.merge(Setting(key='overpass_not_before',value={'time':until}))
+        db.commit()
+    return result
