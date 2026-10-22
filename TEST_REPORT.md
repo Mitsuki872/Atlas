@@ -1,48 +1,63 @@
-# Rapport de validation — 21 octobre 2026
+# Rapport de validation — patch V1.1 — 22 octobre 2026
 
-## Verdict
+## Périmètre et verdict
 
-Préversion 0.1.0 validée sur Linux pour le fonctionnement local et les parcours sur fixtures isolées. **V1 intégrale non validée.** La découverte d’entreprises réelles et l’installation Windows restent non validées ; la recette obligatoire du cahier des charges est donc incomplète.
+Patch appliqué au code existant avec migration additive 0003 et sauvegarde préalable. Fonctionnalités locales de qualité des prospects validées sur Linux, sur bases temporaires avec données synthétiques clairement identifiées. Pas de perte de données observée dans les tests de migration et de reprise. La collecte réelle, Lighthouse et Windows ne sont pas déclarés validés.
 
-## Environnement
+Le rapport de la préversion précédente est conservé dans `docs/TEST_REPORT_0_1.md` ; les résultats ci-dessous concernent ce patch.
 
-Python 3.12.14, Linux, SQLite, versions Python verrouillées dans requirements.txt. Navigateur Chromium système contrôlé par Playwright (outil de QA seulement), Node 24.19.0. Aucun Docker ni service commercial. Base normale initialisée vide ; données synthétiques exclusivement dans des répertoires temporaires préfixés prospect-test-/prospect-browser-.
+## Tests réellement exécutés
 
-## Commandes exécutées et résultats
-
-| Contrôle | Résultat observé |
+| Contrôle | Résultat |
 |---|---|
-| Installation Python, `pip install -r requirements.txt` (mêmes versions installées puis figées) | Réussie |
-| `python -m app.manage migrate` sur base neuve puis existante | Réussi, révisions 0001/0002, sauvegarde préalable |
-| `python -m pytest -q` | **34 tests réussis, 0 échec, 0 ignoré** ; 1 avertissement de dépréciation Starlette/AnyIO |
-| `node --check app/static/app.js` | Réussi |
-| `python -m compileall -q app scripts` | Réussi |
-| `CHROMIUM_PATH=/usr/bin/chromium python scripts/test_browser.py` | **1 parcours navigateur complet réussi**, avec base temporaire et vrais appels HTTP locaux |
-| Démarrage, GET diagnostics/dashboard, arrêt, redémarrage et second diagnostic | Réussi ; backend, base, worker observés ok |
-| Sauvegarde, modification puis restauration et nouvelle ouverture de session | Réussi dans le test d’intégration dédié ; retour à l’état sauvegardé |
-| Petite recherche réelle Overpass : 3 boulangeries Vaud | **Échec externe : timeout POST** |
-| Diagnostic Overpass GET status / petite requête interpreter | **HTTP 406**, aucune donnée réelle récupérée |
-| Alternative publique Overpass et documentation wiki | **403 du proxy**, pas de contournement |
-| Audit réel d’un site d’entreprise découvert | **Non exécuté** : aucune entreprise réelle découverte |
-| Installation/recette Windows et PowerShell/Batch | **Non exécutées** : machine Linux |
-| Publication cloud et restauration dans une nouvelle tâche | **Non exécutées** : à effectuer par l’utilisateur dans le produit |
+| `.venv/bin/python -m pytest -q` | **60 tests réussis, 0 échec, 0 ignoré** ; 1 avertissement de dépréciation Starlette/AnyIO |
+| `CHROMIUM_PATH=/usr/bin/chromium .venv/bin/python scripts/test_browser.py` | Parcours navigateur réel réussi, incluant les sept filtres de contact et les actions rapides |
+| `node --check app/static/app.js` et `node --check tests/browser.cjs` | Réussis |
+| `.venv/bin/python -m compileall -q app migrations scripts` | Réussi |
+| Sauvegarde de la base de l’instance avant migration | Fichier SQLite daté créé dans data/backups |
+| Migration 0002 → 0003 sur l’instance | Réussie ; aucune base remplacée |
+| Migration sur une ancienne base de test contenant données CRM et corrections | Réussie, puis relancée pour vérifier l’idempotence |
+| Diagnostic réel `GET https://overpass-api.de/api/status` | **HTTP 406** ; aucun accès de découverte réussi revendiqué |
+| Présence des outils Lighthouse | Chromium présent, CLI/package Lighthouse absents ; aucune mesure Lighthouse exécutée |
+| Installation Windows | **Non exécutée**, machine Linux |
 
-Les premières tentatives de QA ont révélé une détection Linux incorrecte des processus zombies/ports TIME_WAIT, corrigée et retestée. Le runner navigateur a été isolé de la collecte automatique pytest, puis ses attentes ont été corrigées pour attendre la fin effective des enregistrements avant de poursuivre. Les résultats ci-dessus correspondent aux dernières exécutions après ces corrections, pas aux premiers essais échoués.
+## Matrice des filtres de contact
 
-## Ce que couvrent les tests backend
+Quatre entreprises synthétiques distinctes sont insérées dans une base de test SQLite : téléphone seulement, e-mail seulement, les deux, aucun. Les requêtes passent par la vraie API FastAPI et exécutent les filtres SQL ; les réponses ne sont pas simulées.
 
-Normalisation nom/téléphone ; horaires fractionnés/nocturnes/invalides ; absence d’invention pour les expressions non prises en charge ; scoring et incertitudes ; export ATLAS et priorité des horaires d’appel ; validation entrées et budgets ; SSRF (loopback, métadonnées, privé, port interdit, DNS mixte, redirection privée) ; audits HTML sur réponses contrôlées et refus robots ; pipeline, curseur, pause, déduplication stable, protection des corrections ; suppression de contact propagée aux campagnes et à ATLAS ; API CRM, rappels et montants ; filtres, exports, prévention formules CSV, Host/Origin/jeton local ; paramètres et maintien des pondérations après correction ; migrations, sauvegarde/restauration et persistance ; import autorisé, historique des sources et revue des ambiguïtés.
+| Filtre | Résultats attendus et obtenus |
+|---|---:|
+| Avec téléphone | 2 |
+| Sans téléphone | 2 |
+| Avec e-mail | 2 |
+| Sans e-mail | 2 |
+| Téléphone et e-mail | 1 |
+| Au moins un contact | 3 |
+| Aucun contact | 1 |
 
-Les connecteurs et réponses HTML sont **simulés** dans les tests unitaires/intégration afin de rendre les erreurs reproductibles. Ces tests démontrent le traitement des réponses, pas la disponibilité ni l’autorisation d’une source réelle.
+Tests de cumul avec site, canton, commune, secteur, campagne, score d’opportunité, qualité, statut et dates de vérification. Vérification des totaux indépendants de la taille de page, offset, absence de lignes après le dernier résultat, tri stable et concordance avec les exports. Paramètres invalides et dates inversées donnent une erreur de validation explicite.
 
-## Parcours navigateur réel sur données synthétiques
+## Non-régressions et protection des données
 
-Création puis modification d’une campagne ; navigation vers une fiche ; modification CRM et note ; ajout d’une plage d’appel sourcée ; import JSON de fixture via le sélecteur de fichier ; sélection ; génération et prévisualisation du prompt ; clic sur COPIER et lecture du vrai presse-papiers Chromium pour vérifier l’égalité exacte ; sauvegarde API depuis l’interface ; dashboard ; capture desktop et mobile ; absence de débordement horizontal à 390 px et absence d’erreur JavaScript non gérée. Aucune requête vers une source externe n’est déclenchée par ce scénario. Les campagnes de QA ne sont pas lancées sur Overpass.
+- Chez Nina : e-mail stocké dans raw_tags.email exposé comme principal, avec champ source, date et confiance. Adresse du test réservée `.example`, pas de donnée personnelle réelle.
+- Domaine sans schéma : `restaurant-delice-angevin.com` normalisé en HTTPS avant l’appel réseau du test, puis DNS/SSRF appliqués dans le client réel. Le test utilise une réponse HTML contrôlée et ne prouve pas la disponibilité de ce domaine réel.
+- Horaires `Mo-Fr 11:30-15:00,18:00-24:00` : dix plages ; 23:59 inclus, borne de minuit et pause de midi respectées, dans le domaine et dans les requêtes SQL.
+- Source clairsemée et source riche avec le même constat technique : même opportunité, qualités de données différentes. Audit impossible : opportunité inconnue ; audit exploitable sans problème détecté : zéro de besoin démontré.
+- Collecte équilibrée : alternance, redistribution d’une place de secteur vide, absence de secteur inventé ; mode pertinence distinct.
+- Enrichissement contrôlé : deux pages du même site, e-mail générique seulement, exclusion d’une adresse nom/prénom et d’un mobile privé ; correction manuelle conservée ; autorisation exigée et non-contact imposé.
+- Timeouts : un nouvel essai maximum ; aucun retry d’un refus de politique. Robots, TLS et protections SSRF restent activés.
+- Migration d’une ancienne base : nom/téléphone corrigés, UUID, non-contact, campagne en pause, activité historique, job, appartenance et décision d’ambiguïté conservés. Domaine et e-mail repris depuis les sources ; valeurs d’origine et ancien score archivés ; dates d’origine non rajeunies. Sauvegarde préalable et seconde migration sans duplication.
+- Modification manuelle de téléphone/site pendant l’audit du worker : requête API acceptée pendant le réseau, correction conservée, résultats de l’ancien site non appliqués. Le worker ne bloque pas SQLite en conservant une transaction d’écriture pendant les appels réseau.
+- Les tests antérieurs de CRM, planification, export, CSV, pause/reprise, sauvegarde/restauration, SSRF et jeton local sont conservés, avec attentes de scoring adaptées à la nouvelle sémantique explicitement demandée.
 
-## Non couvert et prochaines validations requises
+## Parcours navigateur
 
-Disponibilité/licences/conditions actuelles de chaque source, collecte réelle, audit réel sur réseau cible, syntaxe exhaustive des horaires, Lighthouse et performances, simulation exhaustive d’interruption brutale pendant l’écriture, sécurité indépendante, charge importante, migrations PostgreSQL, toutes les variantes Windows, installation sans Python et restauration d’un snapshot publié. Le scénario Windows reproductible se trouve dans INSTALLATION_WINDOWS.md. KNOWN_LIMITATIONS.md détaille les fonctions partielles ou absentes.
+Création/modification d’une campagne ; CRM, note et horaire sourcé ; import via le sélecteur de fichier ; sélection et prompt ATLAS ; copie et lecture du vrai presse-papiers Chromium ; sauvegarde ; thème/layout mobile sans débordement global et absence d’erreur JavaScript non gérée.
 
-## Configuration cloud
+Extension V1.1 : sept filtres de contact dans l’interface, combinaison recherche/canton, rechargement conservant les filtres, pagination de 55 lignes avec offset conservé dans l’URL et après rechargement ; liens tel/mailto vérifiés ; copie réelle des coordonnées ; statut Contacté ; note et relance via actions rapides ; sélection ATLAS ; boutons sans contact effectivement désactivés.
 
-`install_script` et `start_skill` ont été enregistrés avec succès dans le brouillon, ainsi que les domaines nécessaires à la recherche des sources/documentations. Cette sauvegarde n’exécute pas les scripts et ne publie pas l’environnement. L’utilisateur doit examiner/enregistrer les paramètres puis publier. Aucun secret n’a été demandé ou ajouté. La publication n’établira pas à elle seule que les opérations externes actuellement en échec fonctionnent : elles doivent être retestées.
+Les premières exécutions ont permis d’adapter les tests de scoring à la séparation demandée, d’isoler le cache robots entre fixtures et d’attendre la fin effective d’ouverture d’une fiche avant assertion sur le formulaire de relance. L’extraction de téléphone a également été corrigée pour ne pas traiter tout le document comme le contexte d’un lien isolé. Les résultats annoncés sont ceux des exécutions après correction.
+
+## Ce que ces tests ne prouvent pas
+
+Aucune réponse externe n’est simulée pour prétendre à une collecte réelle. Les tests de normalisation/équilibrage/enrichissement/audit utilisent des fixtures déterministes ; la seule vérification réelle du service Overpass dans cette session a répondu 406. Aucun numéro n’a été appelé, aucun e-mail envoyé, aucun calendrier modifié, aucun rendez-vous pris. Lighthouse mobile/performances réelles, conformité juridique indépendante et exécution Windows restent à vérifier. Voir KNOWN_LIMITATIONS.md et PATCH_V1_1.md.

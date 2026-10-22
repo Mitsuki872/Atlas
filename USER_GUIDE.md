@@ -1,5 +1,7 @@
 # Guide utilisateur
 
+**V1.1 :** consulter [PATCH_V1_1.md](PATCH_V1_1.md) pour les filtres de contact persistants dans l’URL, la provenance, les actions rapides et les deux scores. Les explications ci-dessous sont complétées par cette mise à jour.
+
 ## Premiers pas
 
 Ouvrir l’application via Start. Un dashboard vide est normal : aucune donnée de démonstration n’est ajoutée. Diagnostics permet de vérifier backend, base, worker et erreurs. La recherche en haut s’exécute avec Entrée. Le bouton de thème est dans la navigation.
@@ -18,7 +20,7 @@ Prospects → Importer JSON. Le fichier est un tableau JSON, sans clé enveloppa
 
 ## Examiner un prospect
 
-Cliquer son nom. La fiche présente les contacts connus, source, date, score, sous-scores, hypothèses, données manquantes et résultats techniques. Un site non identifié n’est pas déclaré inexistant. Un audit impossible à réaliser n’est pas un site en panne. Le potentiel commercial est inconnu par défaut ; le score n’invente aucune intention d’achat ou budget.
+Cliquer son nom. La fiche présente les contacts connus, source, date, scores d’opportunité et de qualité, justifications, hypothèses, données manquantes et résultats techniques. Un site non identifié n’est pas déclaré inexistant. Son opportunité reste non évaluée, indépendamment de la complétude des contacts. Un audit impossible à réaliser n’est pas un site en panne. Le potentiel commercial est inconnu par défaut ; le score n’invente aucune intention d’achat ou budget.
 
 Les corrections manuelles sont enregistrées dans l’historique et protégées des prochaines collectes. Le changement de site invalide son audit. Les ambiguïtés téléphone/domaine permettent de déclarer deux fiches distinctes après vérification ; il n’existe pas encore de fusion manuelle. L’historique des sources est consultable dans la fiche.
 
@@ -38,7 +40,7 @@ Les rappels sont affichés dans le dashboard, sans notification système ou envo
 
 ## Filtres et exports
 
-Prospects, CRM et Planification partagent la base. Combiner recherche, ville, secteur, statut, campagne, score minimum, type d’horaires et jour/heure. Choisir Filtrer pour appliquer. Le tri propose score, nom, ville et date de vérification. Pagination par 50 entreprises.
+Prospects, CRM et Planification partagent la base. Combiner recherche, ville, secteur, statut, campagne, score minimum, type d’horaires et jour/heure. Choisir Filtrer pour appliquer. Le tri propose opportunité, qualité des données, nom, ville et date de vérification. Les filtres et la pagination persistent dans l’URL. Pagination par 50 entreprises.
 
 La sélection se conserve entre les pages ; la sélection de tous les résultats filtrés est limitée à 1 000. Les exports CSV/JSON portent sur les filtres actifs et, lorsqu’une sélection existe, leur intersection avec cette sélection. Pour tout exporter : retirer la sélection ou recharger la page. Le CSV neutralise les chaînes susceptibles d’être interprétées comme formules.
 

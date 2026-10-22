@@ -32,3 +32,7 @@ Les audits sont réutilisés 24 heures, y compris les états non observés : att
 ## Préparation SaaS
 
 API, domaine, connecteur et worker sont séparés. SQLAlchemy et types génériques facilitent PostgreSQL, mais ce changement n’est pas testé et nécessite notamment des migrations adaptées. Il n’existe pas encore d’authentification, organisation, isolation multi-tenant, quotas, abonnements ou facturation. Ne pas exposer cette application sur Internet. Les jetons locaux protègent contre les requêtes d’autres pages web ; ils ne remplacent pas une authentification SaaS.
+
+## Patch V1.1
+
+Migration additive 0003 : email, canton, contacts JSON structurés et quality_score JSON. Le champ score devient exclusivement une mesure de besoin démontré, nullable pour les opportunités non évaluées. contacts.py normalise et évalue la complétude ; filters.py construit les requêtes SQL partagées par listes et exports ; enrichment.py gère les pages contact autorisées. Le worker libère toute transaction avant les accès réseau et relit les corrections/suppressions avant écriture. Un changement manuel de site pendant un audit empêche l’application des résultats de l’ancien site. Les anciennes données et payloads d’export restent conservés. Les nouveaux exports ATLAS ont schema_version 1.1 et incluent email et data_quality.

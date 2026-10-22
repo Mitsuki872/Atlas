@@ -1,6 +1,10 @@
-# Prospect Engine — préversion 0.1.0
+# Prospect Engine — patch qualité 1.1.0
 
-Application locale de prospection B2B, en français, développée à partir du cahier des charges fourni. **La V1 intégrale n’est pas encore validée.** Consulter [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) et [TEST_REPORT.md](TEST_REPORT.md) avant utilisation.
+Application locale de prospection B2B, en français. Le patch [V1.1 — Qualité des prospects](PATCH_V1_1.md) améliore le projet existant avec une migration additive et sauvegarde préalable. **La V1 intégrale n’est pas encore validée.** Consulter [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) et [TEST_REPORT.md](TEST_REPORT.md) avant utilisation.
+
+## Nouveautés V1.1
+
+Filtres de contact côté SQL avec pagination et URL persistante ; e-mail principal et coordonnées sourcées ; collecte équilibrée par secteur ; deux scores indépendants ; enrichissement contact autorisé ; audit HTML renforcé ; actions rapides. Voir PATCH_V1_1.md pour la mise à jour sans perte de données et les limites Lighthouse.
 
 ## Ce qui est implémenté
 
@@ -9,7 +13,7 @@ Application locale de prospection B2B, en français, développée à partir du c
 - Campagnes, worker séparé, file persistante, pause/reprise/arrêt, résultats progressifs et historique des sources.
 - Connecteur Overpass / OSM borné, sans clé payante ; **collecte externe non validée depuis ce cloud** (406 / timeout / refus du proxy). L’import JSON autorisé permet de travailler sur ses propres données.
 - Détection conservative de doublons par identifiant source ; signaux téléphone/domaine présentés pour revue manuelle ; protection des corrections et liste persistante de non-contact.
-- Audit HTML limité avec preuves, robots.txt, validation DNS et adresse publique épinglée, limites et timeouts ; scoring déterministe explicable et pondérations réglables.
+- Audit HTML limité avec preuves, robots.txt, validation DNS et adresse publique épinglée, limites et timeouts ; scores indépendants d’opportunité et de qualité des données.
 - CRM : statuts, notes, appels, résultats, rappels, devis, opportunités et ventes déclarées, statistiques réelles.
 - Horaires fractionnés et nocturnes, saisie sourcée des horaires d’appel, filtres jour/heure. Expressions non prises en charge affichées comme non interprétées.
 - Sélection et exports CSV/JSON ; prompt ATLAS structuré, prévisualisation, copie réelle avec vérification du résultat, historique et états manuels. Aucune synchronisation calendrier.

@@ -59,6 +59,36 @@ const assert=require('node:assert/strict');
  await page.setViewportSize({width:390,height:844});
  await page.screenshot({path:'/tmp/prospect-mobile.png',fullPage:true});
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+
+ // V1.1: true backend/UI filter matrix, URL reload, contact actions and pagination.
+ await page.setViewportSize({width:1280,height:900});
+ const fixtures=[['phone','+41210000001',''],['email','','info@example.org'],['both','+41210000002','contact@example.org'],['none','','']].map(([kind,phone,email])=>({source_id:'filter-'+kind,name:'QA filters '+kind,phone,email,city:'Lausanne',canton:'Vaud',sector:'restaurant',source_url:'https://example.com/qa-filter'}));
+ const imported=await page.request.post('http://127.0.0.1:8765/api/import',{headers:{'X-Local-Token':token},data:{reuse_authorized:true,records:fixtures}});assert.equal(imported.status(),201);
+ await page.locator('nav a[href="#prospects"]').click();
+ for(const [mode,count] of [['phone',2],['no_phone',2],['email',2],['no_email',2],['both',1],['any',3],['none',1]]){
+  await page.locator('#filter-q').fill('QA filters');await page.locator('#filter-contact').selectOption(mode);await page.locator('#filter-canton').selectOption('Vaud');
+  await page.getByRole('button',{name:'Filtrer',exact:true}).click();
+  await page.waitForFunction(([mode,count])=>location.hash.includes('contact='+mode)&&document.querySelector('#filter-contact')?.value===mode&&document.querySelector('#result-count')?.textContent.startsWith(count+' prospect'),[mode,count]);
+ }
+ await page.locator('#filter-contact').selectOption('both');await page.getByRole('button',{name:'Filtrer',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('#result-count')?.textContent.startsWith('1 prospect'));
+ await page.reload();await page.locator('#filter-contact').waitFor();assert.equal(await page.locator('#filter-contact').inputValue(),'both');assert.equal(await page.locator('#filter-q').inputValue(),'QA filters');
+ const row=page.locator('tbody tr').filter({hasText:'QA filters both'});await row.waitFor();
+ assert.equal(await row.getByRole('link',{name:'Appeler',exact:true}).getAttribute('href'),'tel:+41210000002');
+ assert.equal(await row.getByRole('link',{name:'E-mail',exact:true}).getAttribute('href'),'mailto:contact@example.org');
+ await row.getByRole('button',{name:'Copier les coordonnées'}).click();await page.getByRole('status').filter({hasText:'Coordonnées copiées'}).waitFor();
+ assert((await page.evaluate(()=>navigator.clipboard.readText())).includes('contact@example.org'));
+ await row.getByRole('button',{name:'Marquer contacté'}).click();await page.getByRole('status').filter({hasText:'Statut enregistré'}).waitFor();
+ await row.getByRole('button',{name:'Note',exact:true}).click();await page.locator('#activity-form [name=text]').fill('Quick note V1.1');await page.getByRole('button',{name:'Enregistrer l’activité'}).click();await page.locator('.activity').filter({hasText:'Quick note V1.1'}).waitFor();await page.getByRole('button',{name:'Fermer',exact:true}).click();
+ await row.getByRole('button',{name:'Relance',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#modal')?.open&&document.querySelector('#activity-form [name=kind]')?.value==='reminder');assert.equal(await page.locator('#activity-form [name=kind]').inputValue(),'reminder');await page.locator('#activity-form [name=text]').fill('Quick reminder V1.1');await page.locator('#activity-form [name=due_at]').fill('2027-01-02T10:00');await page.getByRole('button',{name:'Enregistrer l’activité'}).click();await page.locator('.activity').filter({hasText:'Quick reminder V1.1'}).waitFor();await page.getByRole('button',{name:'Fermer',exact:true}).click();
+ await row.getByRole('button',{name:'Ajouter à ATLAS'}).click();await row.getByRole('button',{name:'Retirer d’ATLAS'}).waitFor();
+ const noneUrl='http://127.0.0.1:8765/#prospects?q=QA+filters&contact=none';await page.goto(noneUrl);const noRow=page.locator('tbody tr').filter({hasText:'QA filters none'});await noRow.waitFor();assert(await noRow.getByRole('button',{name:'Appeler',exact:true}).isDisabled());assert(await noRow.getByRole('button',{name:'E-mail',exact:true}).isDisabled());
+ await page.goBack();await page.waitForFunction(()=>document.querySelector('#filter-contact')?.value==='both');await page.goForward();await page.waitForFunction(()=>document.querySelector('#filter-contact')?.value==='none');
+ const many=Array.from({length:55},(_,i)=>({source_id:'page-'+i,name:'QA pagination '+String(i).padStart(2,'0'),source_url:'https://example.com/qa-pagination'}));
+ assert.equal((await page.request.post('http://127.0.0.1:8765/api/import',{headers:{'X-Local-Token':token},data:{reuse_authorized:true,records:many}})).status(),201);
+ await page.goto('http://127.0.0.1:8765/#prospects?q=QA+pagination&sort=name');await page.getByRole('button',{name:'Suivant →'}).click();await page.waitForURL(/offset=50/);await page.reload();await page.locator('tbody tr').first().waitFor();assert.equal(await page.locator('tbody tr').count(),5);assert(locationTest(await page.url()));
+ function locationTest(url){return url.includes('offset=50')&&url.includes('q=QA+pagination');}
+ console.log('PASS V1.1: seven contact filters, combined canton/search, URL reload and pagination, tel/mailto, actual contact clipboard, contacted status, quick note/reminder, ATLAS selection, disabled missing contacts.');
  assert.deepEqual(errors,[]);
  console.log('PASS: campaign create/edit, CRM note/status, selection, ATLAS prompt, actual clipboard, sourced call hours, JSON import, backup, dashboard, mobile, no JS errors.');
  await browser.close();

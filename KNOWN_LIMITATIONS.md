@@ -1,38 +1,38 @@
-# Limites connues — V1 intégrale non livrée
+# Limites restantes — après le patch V1.1
 
-Cette version 0.1.0 est une préversion locale utilisable pour l’import, le CRM, les horaires et les exports. Elle ne satisfait pas encore le critère ultime de la V1 du cahier des charges. Ne pas la commercialiser comme une V1 complète.
+Le patch qualité V1.1 met à jour la préversion existante. Il ne valide pas l’ensemble de la V1 initiale. Les filtres/contacts/scores/actions du patch sont implémentés et testés ; les limites ci-dessous restent explicites.
 
-## Blocages de validation externe
+## Sources et validations externes
 
-- Aucun résultat réel Overpass obtenu dans ce cloud : timeout POST, HTTP 406 GET ; proxy initialement restrictif. Le connecteur est implémenté et testé avec fixtures, mais son fonctionnement externe n’est pas prouvé.
-- Les conditions d’accès en vigueur d’Overpass et Zefix n’ont pas pu être entièrement consultées/confirmées. Zefix non implémenté ; pas de collecte massive.
-- Les URL arbitraires d’audit utilisent une connexion directe avec DNS épinglé ; un cloud imposant un proxy peut les rendre inaccessibles. Pas de contournement de la vérification ou du réseau.
-- Aucun test sur Windows : installateur PowerShell, raccourci et scripts batch restent à valider sur poste cible. Pas de binaire autonome signé.
-- Recette Vaud → entreprises réelles → audits réels → Windows non exécutée de bout en bout. Les tests navigateur utilisent des fixtures identifiées dans une base temporaire.
+- Overpass reste non validé en collecte réelle dans ce cloud. Le diagnostic du 22 octobre 2026 répond HTTP 406. Les tests de connecteur utilisent des réponses contrôlées, sans prétendre à un accès externe réussi.
+- Les conditions/quotas actuels de chaque source doivent être vérifiés avant usage. Pas de contournement d’un blocage, de Nominatim systématique ou d’extraction massive via une instance publique. Zefix et les fournisseurs commerciaux ne sont pas implémentés.
+- Un seul connecteur de découverte Internet est implémenté. L’import JSON autorisé est opérationnel mais ne constitue pas une preuve de découverte externe. Pas d’import CSV ni d’extraits régionaux.
+- La sélection équilibrée utilise un pool borné par secteur, pas la totalité de la source. Le nombre disponible total reste inconnu, affiché comme tel. Le mode pertinence ordonne les contacts présents, pas l’intention d’achat. Une entreprise conserve un secteur principal pour le tableau et ses catégories sources ; une entreprise multi-catégories ne compte qu’une seule fois dans la sélection équilibrée. Les succursales nécessitent une revue manuelle.
+- L’enrichissement exige confirmation humaine du caractère officiel du site et des droits de consultation/réutilisation. Il est limité à la page principale et deux liens contact du même site, sans redirection ni exécution JavaScript. Pas de découverte automatique de site officiel. Les coordonnées OSM restent déclaratives. Les e-mails personnels sont exclus de l’extraction web automatisée par une liste conservative de boîtes génériques ; celle-ci peut manquer des adresses professionnelles valides.
+- La normalisation téléphonique domestique reste orientée Suisse ; utiliser des numéros internationaux pour les entreprises étrangères. Syntaxe et normalisation ne prouvent pas la joignabilité.
 
-## Écarts fonctionnels restants
+## Audit et scores
 
-- Pas de Next.js/TypeScript, shadcn, TanStack Query ; frontend léger servi par FastAPI (choix expliqué dans ARCHITECTURE).
-- Paramètres campagne réduits : pas de pays autre que Suisse, rayon, géocodage, types d’opportunités configurables, profondeur d’audit configurable ou choix multiple de connecteurs. Secteurs et cantons explicitement limités. Le budget n’active aucun achat, tous les fournisseurs actuels étant gratuits.
-- Une seule source de découverte Internet implémentée. Pas de registre complet de connecteurs activables, connecteur extrait régional, fournisseur commercial ni IA.
-- L’import utilisateur est JSON uniquement (pas CSV en entrée), et ne déclenche pas l’audit web automatiquement.
-- Audit limité au HTML reçu et robots.txt : pas de Lighthouse, mesures mobiles, performances, Core Web Vitals, analyse du rendu, crawl contact/services, sitemap, vérification active de liens cassés ou tests complets d’accessibilité. Les redirections de l’accueil sont refusées, pas validées comme site en panne. Aucun site officiel n’est identifié par moteur de recherche.
-- Pas d’enrichissement Zefix, identifiants officiels, e-mails, réseaux ou vérification indépendante des coordonnées. Données inconnues laissées inconnues. L’interface ne gère pas encore tous les champs détaillés de la fiche entreprise.
-- Déduplication automatique limitée au même identifiant source ; pas de fusion manuelle. Les signaux téléphone/domaine permettent de déclarer des fiches distinctes, pas d’affirmer qu’elles sont identiques. Pas de résolution complète des contradictions champ par champ.
-- Horaires : sous-ensemble explicite OSM seulement. Pas de moteur de jours fériés, dates exceptionnelles, syntaxe opening_hours complète, multi-jours sélectionnés, filtre intervalle/matin/après-midi/soir, correction/suppression des plages saisies ou gestion d’obsolescence. Les horaires non interprétés restent visibles et ne deviennent pas des disponibilités.
-- CRM en table, pas Kanban ; rappels affichés mais sans notification système, marquage « effectué » ou report intégré. Devis/ventes sont des activités déclarées, pas des documents PDF ni un workflow de facturation. Pas de motif de refus structuré. Statuts et activités volontairement indépendants.
-- Dashboard réduit : pas de calcul complet du taux de réponse/intérêt ni rapport avancé par campagne/secteur. Compteurs et graphiques présents utilisent exclusivement la base réelle de l’instance.
-- Les filtres n’incluent pas encore toutes les dimensions du cahier des charges (région détaillée, source, fiabilité, analyse, opportunité, priorité). Recherche globale limitée aux noms, villes et téléphones.
-- États de planification manuels ; pas d’import d’événements ni de synchronisation Notion/Calendar. Le prompt ne garantit pas le comportement d’ATLAS ; validation humaine indispensable.
-- Pas de purge automatique, rétention configurable, suppression sélective, chiffrement local ou authentification multi-utilisateur.
-- Modèle consolidé : certaines entités demandées sont des champs JSON ou types d’activité, pas des tables indépendantes. PostgreSQL et SaaS non testés ; isolation multi-tenant, quotas distribués, facturation et abonnements absents.
-- Le heartbeat est mis à jour entre jobs ; une longue campagne peut apparaître « occupé depuis plus de 90 s » sans être bloquée. La pause/annulation attend la fin du traitement d’une entreprise.
-- Pas de rotation automatique des sauvegardes/logs ; surveiller l’espace disque. Ne pas partager les sauvegardes.
+- **Lighthouse mobile n’est pas installé dans l’environnement validé.** Aucun résultat Lighthouse, Core Web Vitals ou rendu mobile n’est revendiqué. Même si un exécutable est ajouté, son lancement automatique reste suspendu tant que toutes les sous-requêtes navigateur ne sont pas protégées contre le SSRF. Chromium seul ne suffit pas.
+- L’audit mesure le HTML reçu : SEO/accessibilité partiels, trois liens internes au maximum. Pas de sitemap approfondi, parcours contact complet, liens externes, rendu JS, tests utilisateurs ou audit d’accessibilité exhaustif.
+- Le client d’audit utilise des connexions directes DNS épinglées ; un cloud imposant un proxy peut empêcher les audits/enrichissements réels. Une restriction réseau donne un état non disponible, pas un mauvais score.
+- Les redirections ne sont pas suivies. Robots indisponible hors 404/410 : accès suspendu. Une autorisation robots ne démontre pas tous les droits de réutilisation.
+- Le score d’opportunité concerne actuellement la prestation web et les constats effectivement analysés, pas le potentiel financier ni une probabilité de vente. Aucune intention/budget inventé. Le score de qualité mesure surtout disponibilité, provenance et fraîcheur ; il ne certifie pas la fiabilité indépendante de chaque source.
+- Les anciennes pondérations sont conservées dans les paramètres et archives, mais n’influencent pas le nouveau score de besoin ; pas encore de configuration distincte des règles de chaque service.
+- Les audits de campagne sont réutilisés 24 h, y compris les états non disponibles ; la fiche propose une relance explicite contrôlée. Les contacts disparus d’une nouvelle source restent dans l’historique structuré : la source/date permet de juger leur fraîcheur.
 
-## Priorités suivantes
+## Installation et fonctionnalités V1 initiales
 
-1. Valider légalement et techniquement une source de découverte réelle depuis le réseau cible, puis exécuter la recette Vaud et audit réel avec consentement/conditions appropriés.
-2. Valider tous les lanceurs sur Windows 10/11, chemins avec espaces, dépendances absentes, interruptions, mise à jour et restauration.
-3. Étendre les horaires avec un moteur complet des exceptions et dates, édition sûre et source vérifiable.
-4. Compléter le moteur d’audit, les opportunités configurables, les filtres et la qualification sans confondre estimations et observations.
-5. Compléter la gouvernance des données (suppression, conservation), les tests de sécurité indépendants et le modèle métier avant une version commercialisable.
+- Installation Windows, raccourci et scripts PowerShell/Batch non exécutés sur Windows. Pas de binaire autonome signé. La logique Python partagée est testée sur Linux ; suivre la recette cible dans INSTALLATION_WINDOWS.md.
+- La recette obligatoire sur de vraies entreprises de Vaud et sur Windows demeure incomplète. Aucun test avec fixtures n’est présenté comme preuve de cette recette.
+- Frontend léger HTML/CSS/JavaScript, pas de Next.js/TypeScript : choix documenté, pas de reconstruction dans ce patch.
+- Campagnes limitées aux cantons/secteurs suisses disponibles : pas de rayon, pays configurable, géocodage, fournisseurs payants ou profondeur libre. Enrichissement par campagne optionnel et autorisé explicitement.
+- Pas de fusion manuelle des doublons, ni de résolution exhaustive des contradictions champ par champ. Les corrections manuelles et les déclarations de fiches distinctes sont conservées. Aucune fusion sur simple nom.
+- Horaires : plages explicites et 24:00 pris en charge ; pas de syntaxe OSM complète, dates exceptionnelles, jours fériés, filtres multi-jours ou correction/suppression sûre des plages existantes.
+- CRM en table, rappels visibles sans notification système ni envoi automatique. Devis/ventes/opportunités sont des activités déclarées, pas des documents de facturation. Pas de motif de refus structuré ni de reporting exhaustif par campagne.
+- Exports ATLAS et états de planning manuels uniquement, aucune synchronisation Notion/Calendar ni prise de rendez-vous. Copier un prompt ne modifie pas le CRM.
+- Pas de rétention automatique, suppression sélective, rotation de logs/sauvegardes, chiffrement au repos ou authentification multi-utilisateur. Conserver les données et sauvegardes dans un dossier protégé.
+- PostgreSQL/SaaS/multi-tenant/facturation non développés. Ne pas exposer l’application sur Internet.
+- Une instance par machine. Pause/arrêt attendent la fin de l’entreprise en cours ; le worker ne conserve plus de transaction d’écriture pendant les accès réseau. Son heartbeat peut afficher « occupé depuis plus de 90 s » durant une longue campagne.
+
+Voir PATCH_V1_1.md pour les changements et TEST_REPORT.md pour les validations effectives.

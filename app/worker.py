@@ -7,6 +7,8 @@ from app.db import Session, Campaign, Company, Job, Membership, Setting, Log, So
 from app.connectors import OverpassConnector
 from app.domain import score_company, normalize_name
 from app.network import audit_website
+from app.contacts import quality_score
+from app.enrichment import enrich_website,apply_enrichment
 
 stop_event=threading.Event()
 def progress():return {'discovered':0,'normalized':0,'duplicates':0,'enriched':0,'audited':0,'qualified':0,'errors':0,'remaining':0,'measured_cost_chf':0,'estimated_cost_chf':0}
@@ -22,50 +24,70 @@ def process_job(job_id,connector=None):
             if connector.id=='osm-overpass' and time.time()-last<60:
                 job.state='queued';db.commit();return
             if connector.id=='osm-overpass':
-                if control:control.value={'time':time.time()}
-                else:db.add(Setting(key='overpass_last_request',value={'time':time.time()}))
-                db.commit()
-            job.records=connector.discover(campaign.config)
-            campaign.progress={**progress(), 'discovered':len(job.records),'remaining':len(job.records),'possibly_truncated':len(job.records)>=campaign.config['max_prospects']}
+                db.merge(Setting(key='overpass_last_request',value={'time':time.time()}))
+            config=dict(campaign.config);db.commit()
+            records=connector.discover(config)
+            job.records=records
+            campaign.progress={**progress(),'discovered':len(records),'remaining':len(records),'possibly_truncated':len(records)>=config['max_prospects'],'distribution':getattr(connector,'discovery_stats',{})}
             db.commit()
-        while job.cursor<len(job.records):
-            db.refresh(campaign)
-            if campaign.state!='running' or stop_event.is_set():
-                job.state='queued';db.commit();return
-            record=job.records[job.cursor];p=dict(campaign.progress);p['normalized']+=1
-            excluded=any(normalize_name(x) in normalize_name(record['name']) for x in campaign.config['exclusions'] if x.strip())
-            city=campaign.config.get('city','')
-            if city and normalize_name(city)!=normalize_name(record['city']):excluded=True
+    while True:
+        # Snapshot without a write transaction: network work must never hold SQLite's write lock.
+        with Session() as db:
+            job=db.get(Job,job_id);campaign=db.get(Campaign,job.campaign_id)
+            if campaign.state!='running' or stop_event.is_set():job.state='queued';db.commit();return
+            if job.cursor>=len(job.records):
+                job.state='done';campaign.state='completed';campaign.error=None;db.commit();return
+            record=dict(job.records[job.cursor]);config=dict(campaign.config)
+            from app.contacts import osm_contacts,normalize_phone,normalize_website
+            facts=record.get('facts',{});contacts=record.get('contacts') or osm_contacts(facts.get('raw_tags',{}),facts.get('source',''),facts.get('checked_at',now()))
+            record['contacts']=contacts
+            record.setdefault('email',next((c['value'] for c in contacts if c['kind']=='email'),''))
+            record.setdefault('canton',config.get('canton',''))
+            record['phone']=normalize_phone(record.get('phone',''))
+            try:record['website']=normalize_website(record.get('website',''))
+            except ValueError:record['website']=''
+            excluded=any(normalize_name(x) in normalize_name(record['name']) for x in config['exclusions'] if x.strip())
+            if config.get('city') and normalize_name(config['city'])!=normalize_name(record['city']):excluded=True
+            existing=db.scalar(select(Company).where(Company.identity==record['identity']))
+            suppressed=bool(existing and existing.suppressed)
+            website=existing.website if existing and 'website' in existing.manual_fields else record['website']
+            cached=dict(existing.audit) if existing else {}
+            cursor=job.cursor;campaign_id=campaign.id
+        audit=None;enrichment=None
+        if not excluded and not suppressed:
+            from datetime import datetime,timezone,timedelta
+            checked=cached.get('checked_at')
+            fresh=checked and datetime.fromisoformat(checked)>datetime.now(timezone.utc)-timedelta(hours=24)
+            if config['audit_web'] and not fresh:audit=audit_website(website)
+            if config.get('enrich_contacts') and website:enrichment=enrich_website(website)
+        with Session() as db:
+            job=db.get(Job,job_id);campaign=db.get(Campaign,campaign_id)
+            if job.cursor!=cursor:raise RuntimeError('Curseur modifié par un autre traitement')
+            p=dict(campaign.progress);p['normalized']+=1
             if not excluded:
                 company=db.scalar(select(Company).where(Company.identity==record['identity']))
                 if company:p['duplicates']+=1
-                else:
-                    company=Company(**record);db.add(company);db.flush()
+                else:company=Company(**record);db.add(company);db.flush()
                 if not company.suppressed:
                     db.add(SourceRecord(company_id=company.id,campaign_id=campaign.id,payload=record))
-                    for key in ('name','city','sector','phone','website','facts'):
-                        if key not in company.manual_fields:setattr(company,key,record[key])
+                    for key in ('name','city','canton','sector','phone','email','website','facts'):
+                        if key not in company.manual_fields and key in record:setattr(company,key,record[key])
+                    saved={(c['kind'],c['value'],c.get('source')):c for c in company.contacts}
+                    for item in contacts:saved[(item['kind'],item['value'],item.get('source'))]=item
+                    company.contacts=list(saved.values())
+                    if company.website==website:
+                        if audit and audit.get('checked_at','')>=company.audit.get('checked_at',''):company.audit=audit
+                        if enrichment:apply_enrichment(company,enrichment)
                     p['enriched']+=1
-                    # Reuse audits for 24 h; failed audits can be retried by another run.
-                    from datetime import datetime, timezone, timedelta
-                    cached=company.audit.get('checked_at')
-                    fresh=cached and datetime.fromisoformat(cached)>datetime.now(timezone.utc)-timedelta(hours=24)
-                    if campaign.config['audit_web'] and not fresh:
-                        company.audit=audit_website(company.website)
                     if company.audit.get('state')=='observed':p['audited']+=1
                     if company.audit.get('error'):p['errors']+=1
                     weights=db.get(Setting,'scoring')
-                    company.score=score_company(company,weights.value if weights else None)
-                    company.verified_at=now()
+                    company.score=score_company(company,weights.value if weights else None);company.quality_score=quality_score(company)
+                    company.verified_at=record.get('facts',{}).get('checked_at',company.verified_at)
                     if not db.get(Membership,(campaign.id,company.id)):db.add(Membership(campaign_id=campaign.id,company_id=company.id))
-                    if company.score['total']>=campaign.config['min_score']:p['qualified']+=1
+                    if company.score['total'] is not None and company.score['total']>=config['min_score']:p['qualified']+=1
             job.cursor+=1;p['remaining']=len(job.records)-job.cursor;campaign.progress=p
             db.commit()
-        db.refresh(campaign)
-        if campaign.state=='running':
-            job.state='done';campaign.state='completed';campaign.error=None
-        else:job.state='queued'
-        db.commit()
 def run():
     # Port is an OS-released cross-platform singleton lock, not a service endpoint.
     lock=socket.socket()

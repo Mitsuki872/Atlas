@@ -1,3 +1,7 @@
+# Mise à jour V1.1
+
+Voir PATCH_V1_1.md pour les contacts normalisés, l’enrichissement de deux pages contact maximum, les reprises contrôlées et la sortie indépendante bornée par secteur. Les descriptions V0.1 ci-dessous sont historiques lorsque contredites par ce patch. Le diagnostic externe du 22 octobre retourne encore HTTP 406 ; aucun accès réel réussi revendiqué.
+
 # Connecteurs, sources et conditions
 
 ## OpenStreetMap / Overpass

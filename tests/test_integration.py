@@ -126,4 +126,5 @@ def test_edited_company_keeps_configured_weights(client):
     id=client.get('/api/companies').json()['items'][0]['id']
     response=client.patch('/api/companies/'+id,json={'city':'Test'})
     assert response.json()['score']['weights']==weights
-    assert response.json()['score']['total']==100
+    assert response.json()['score']['total'] is None
+    assert response.json()['quality_score']['total']>0

@@ -15,6 +15,10 @@ Windows 10/11 64 bits, droits d’écriture dans le dossier extrait, navigateur 
 
 Si PowerShell bloque un fichier téléchargé : vérifier l’origine et le contenu de l’archive avant de débloquer les fichiers via leurs Propriétés. La commande utilise `RemoteSigned`, ne désactive pas globalement la politique d’exécution. Respecter les règles du poste géré ; demander à l’administrateur si nécessaire. Ne pas désactiver la vérification TLS pour installer les dépendances.
 
+## Mise à jour V1.1 sans perte de données
+
+Arrêter avec Stop.bat puis exécuter Backup.bat. Copier les nouveaux fichiers dans le dossier existant **sans supprimer ni remplacer `data`**. Relancer Install.bat : la migration 0003 est additive et précédée d’une sauvegarde cohérente automatique. Puis Start.bat et rechargement du navigateur. Les dépendances quotidiennes restent Python seulement. Voir [PATCH_V1_1.md](PATCH_V1_1.md) pour la procédure et les contrôles de contacts.
+
 ## Usage quotidien
 
 - `Start.bat` : vérifie la base, démarre backend + worker, ouvre le navigateur. Le frontend est servi par le backend : aucun troisième processus nécessaire.

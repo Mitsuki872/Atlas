@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends, Query
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ConfigDict, field_validator
@@ -14,8 +14,11 @@ from sqlalchemy import select, func, or_
 from app.db import Session, DATA, Campaign, Company, Membership, Activity, Job, Setting, Log, PlanningExport, SourceRecord, now, serialize
 from app.domain import CampaignInput, STATUSES, SECTORS, CANTONS, available, atlas_export, score_company
 from app.connectors import OverpassConnector
+from app.contacts import normalize_email, normalize_phone, normalize_website, contact, quality_score
+from app.filters import CompanyFilters, company_query
+from app.network import audit_capabilities
 
-app=FastAPI(title='Prospect Engine',version='0.1.0')
+app=FastAPI(title='Prospect Engine',version='1.1.0')
 STATIC=Path(__file__).parent/'static'
 TOKEN=secrets.token_urlsafe(32)
 @app.middleware('http')
@@ -76,32 +79,13 @@ def campaign_action(id:str,action:str):
             job=db.scalar(select(Job).where(Job.campaign_id==id).order_by(Job.created_at.desc()))
             if job:job.state='queued'
         db.commit();return serialize(c)
-def company_query(q='',city='',sector='',status='',campaign='',min_score=0,hours='',day=None,at=None):
-    query=select(Company)
-    if q:query=query.where(or_(Company.name.icontains(q,autoescape=True),Company.city.icontains(q,autoescape=True),Company.phone.contains(q,autoescape=True)))
-    if city:query=query.where(Company.city.icontains(city,autoescape=True))
-    if sector:query=query.where(Company.sector==sector)
-    if status:query=query.where(Company.status==status)
-    if campaign:query=query.join(Membership).where(Membership.campaign_id==campaign)
-    return query.order_by(Company.name)
-def filtered(db,q='',city='',sector='',status='',campaign='',min_score=0,hours='',day=None,at=None):
-    rows=list(db.scalars(company_query(q,city,sector,status,campaign)))
-    rows=[c for c in rows if c.score.get('total',0)>=min_score]
-    if hours=='known':rows=[c for c in rows if c.facts.get('hours',{}).get('slots')]
-    if hours=='call':rows=[c for c in rows if any(s.get('type')=='call' for s in c.facts.get('hours',{}).get('slots',[]))]
-    if hours=='unknown':rows=[c for c in rows if not c.facts.get('hours',{}).get('slots')]
-    if day is not None and at:
-        try:rows=[c for c in rows if available(c.facts.get('hours',{}),day,at)]
-        except ValueError:raise HTTPException(422,'Heure invalide')
-    return rows
 @app.get('/api/companies')
-def companies(q:str='',city:str='',sector:str='',status:str='',campaign:str='',min_score:int=0,hours:str='',day:int|None=None,at:str|None=None,sort:str='score',offset:int=0,limit:int=50):
+def companies(filters:CompanyFilters=Depends(),offset:int=Query(default=0,ge=0),limit:int=Query(default=50,ge=1,le=200)):
     with Session() as db:
-        rows=filtered(db,q,city,sector,status,campaign,min_score,hours,day,at)
-        if sort=='score':rows.sort(key=lambda c:c.score.get('total',0),reverse=True)
-        elif sort=='city':rows.sort(key=lambda c:c.city)
-        elif sort=='date':rows.sort(key=lambda c:c.verified_at,reverse=True)
-        return {'total':len(rows),'items':[serialize(c) for c in rows[max(0,offset):max(0,offset)+min(200,max(1,limit))]]}
+        query=company_query(filters)
+        count=db.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
+        rows=db.scalars(query.offset(offset).limit(limit))
+        return {'total':count,'items':[serialize(c) for c in rows],'offset':offset,'limit':limit}
 @app.get('/api/companies/{id}')
 def company_detail(id:str):
     with Session() as db:
@@ -112,8 +96,23 @@ class CompanyPatch(BaseModel):
     name:str|None=Field(default=None,min_length=1,max_length=300)
     city:str|None=Field(default=None,max_length=200)
     phone:str|None=Field(default=None,max_length=100)
+    email:str|None=Field(default=None,max_length=254)
+    canton:str|None=Field(default=None,max_length=100)
     website:str|None=Field(default=None,max_length=2000)
     status:str|None=None
+    @field_validator('email')
+    @classmethod
+    def valid_email(cls,v):
+        if v and not normalize_email(v):raise ValueError('E-mail professionnel invalide')
+        return normalize_email(v) if v else v
+    @field_validator('phone')
+    @classmethod
+    def valid_phone(cls,v):
+        if v and not normalize_phone(v):raise ValueError('Téléphone invalide')
+        return normalize_phone(v) if v else v
+    @field_validator('website')
+    @classmethod
+    def valid_website(cls,v):return normalize_website(v) if v else v
     @field_validator('status')
     @classmethod
     def status_valid(cls,v):
@@ -130,10 +129,13 @@ def update_company(id:str,data:CompanyPatch):
         for key,value in changes.items():
             old=getattr(c,key);setattr(c,key,value)
             if old!=value:
-                label={'status':'Statut','name':'Nom','city':'Ville','phone':'Téléphone','website':'Site web'}[key]
+                label={'status':'Statut','name':'Nom','city':'Ville','phone':'Téléphone','website':'Site web','email':'E-mail','canton':'Canton'}[key]
                 db.add(Activity(company_id=id,kind='change',text=f'{label} : {old or "inconnu"} → {value or "inconnu"}'))
         if data.status=='Ne plus contacter':c.suppressed=1
-        c.manual_fields=list(set(c.manual_fields)|set(changes));c.score=score_company(c,current_weights(db));db.commit();return serialize(c)
+        for kind in ('phone','email','website'):
+            if kind in changes:
+                c.contacts=[item for item in c.contacts if item['kind']!=kind]+([contact(kind,changes[kind],'Saisie manuelle',now(),'manual','user_verified')] if changes[kind] else [])
+        c.manual_fields=list(set(c.manual_fields)|set(changes));c.score=score_company(c,current_weights(db));c.quality_score=quality_score(c);db.commit();return serialize(c)
 class ActivityInput(BaseModel):
     model_config=ConfigDict(extra='forbid')
     kind:str
@@ -182,19 +184,18 @@ def planning_state(id:str,data:PlanningState):
     with Session() as db:
         obj=must(db,PlanningExport,id);obj.state=data.state;db.commit();return serialize(obj)
 @app.get('/api/export')
-def export_companies(format:str='json',ids:str='',q:str='',city:str='',sector:str='',status:str='',campaign:str='',min_score:int=0,hours:str='',day:int|None=None,at:str|None=None):
+def export_companies(format:str='json',ids:str='',filters:CompanyFilters=Depends()):
     with Session() as db:
-        rows=filtered(db,q,city,sector,status,campaign,min_score,hours,day,at)
-        if ids:
-            selected=set(ids.split(','));rows=[c for c in rows if c.id in selected]
-        data=[serialize(c) for c in rows]
+        query=company_query(filters)
+        if ids:query=query.where(Company.id.in_(ids.split(',')))
+        data=[serialize(c) for c in db.scalars(query)]
     if format=='json':return Response(json.dumps(data,ensure_ascii=False,indent=2),media_type='application/json',headers={'Content-Disposition':'attachment; filename=prospects.json'})
     if format!='csv':raise HTTPException(422,'Format inconnu')
-    out=io.StringIO();writer=csv.writer(out);writer.writerow(['id','nom','ville','secteur','telephone','site','statut','score','source'])
+    out=io.StringIO();writer=csv.writer(out);writer.writerow(['id','nom','ville','canton','secteur','telephone','email','site','statut','opportunite','qualite_donnees','source'])
     def safe(v):
         value=str(v)
         return "'"+value if value.lstrip().startswith(('=','+','-','@','\t','\r')) else value
-    for c in data:writer.writerow([safe(v) for v in [c['id'],c['name'],c['city'],c['sector'],c['phone'],c['website'],c['status'],c['score'].get('total',0),c['facts'].get('source','')]])
+    for c in data:writer.writerow([safe(v) for v in [c['id'],c['name'],c['city'],c['canton'],c['sector'],c['phone'],c['email'],c['website'],c['status'],c['score'].get('total'),c['quality_score'].get('total'),c['facts'].get('source','')]])
     return Response('\ufeff'+out.getvalue(),media_type='text/csv',headers={'Content-Disposition':'attachment; filename=prospects.csv'})
 @app.get('/api/dashboard')
 def dashboard():
@@ -208,7 +209,7 @@ def diagnostics():
     with Session() as db:
         db.execute(select(1));heartbeat=db.get(Setting,'worker_heartbeat')
         alive=bool(heartbeat and datetime.fromisoformat(heartbeat.value['at'])>datetime.now(timezone.utc)-timedelta(seconds=90))
-        return {'backend':'ok','database':'ok','worker':'ok' if alive else 'absent ou occupé depuis plus de 90 s','data_directory':str(DATA),'connectors':[OverpassConnector.metadata,{'id':'zefix','status':'not_implemented','reason':'Conditions et accès non validés ; aucune extraction effectuée.'}],'errors':[serialize(e) for e in db.scalars(select(Log).order_by(Log.created_at.desc()).limit(20))]}
+        return {'backend':'ok','database':'ok','worker':'ok' if alive else 'absent ou occupé depuis plus de 90 s','data_directory':str(DATA),'connectors':[OverpassConnector.metadata,{'id':'zefix','status':'not_implemented','reason':'Conditions et accès non validés ; aucune extraction effectuée.'}],'audit_capabilities':audit_capabilities(),'errors':[serialize(e) for e in db.scalars(select(Log).order_by(Log.created_at.desc()).limit(20))]}
 class Weights(BaseModel):
     model_config=ConfigDict(extra='forbid')
     need:int=Field(ge=0,le=100)
@@ -226,7 +227,7 @@ def update_weights(data:Weights):
     if sum(weights.values())==0:raise HTTPException(422,'Au moins une pondération positive requise')
     with Session() as db:
         db.merge(Setting(key='scoring',value=weights))
-        for c in db.scalars(select(Company)):c.score=score_company(c,weights)
+        for c in db.scalars(select(Company)):c.score=score_company(c,weights);c.quality_score=quality_score(c)
         db.commit()
     return weights
 @app.post('/api/backup')
@@ -271,7 +272,7 @@ def add_hours(id:str,data:HourSlot):
         c.facts={**c.facts,'hours':{'state':'reported','raw':previous.get('raw','') or 'Horaires renseignés manuellement avec source','slots':slots}}
         c.manual_fields=list(set(c.manual_fields)|{'facts'})
         db.add(Activity(company_id=id,kind='change',text='Horaire sourcé ajouté : '+json.dumps(slot,ensure_ascii=False)))
-        c.score=score_company(c,current_weights(db));db.commit();return serialize(c)
+        c.score=score_company(c,current_weights(db));c.quality_score=quality_score(c);db.commit();return serialize(c)
 
 class ImportCompany(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -281,8 +282,16 @@ class ImportCompany(BaseModel):
     sector:str=Field(default='',max_length=100)
     phone:str=Field(default='',max_length=100)
     website:str=Field(default='',max_length=2000)
+    email:str=Field(default='',max_length=254)
+    canton:str=Field(default='',max_length=100)
     source_url:str=Field(min_length=8,max_length=2000)
     opening_hours:str=Field(default='',max_length=1000)
+    @field_validator('email')
+    @classmethod
+    def valid_email(cls,v):return CompanyPatch.valid_email(v)
+    @field_validator('website')
+    @classmethod
+    def valid_site(cls,v):return CompanyPatch.valid_website(v)
     @field_validator('source_url')
     @classmethod
     def valid_source(cls,v):return HourSlot.valid_source(v)
@@ -302,14 +311,15 @@ def import_records(data:ImportBatch):
             c=db.scalar(select(Company).where(Company.identity==key))
             if c and c.suppressed:continue
             facts={'source':row.source_url,'confidence':'user_supplied','hours':parse_hours(row.opening_hours,row.source_url,now()),'import_source_id':row.source_id}
-            fields={'name':row.name,'city':row.city,'sector':row.sector,'phone':normalize_phone(row.phone),'website':row.website,'facts':facts}
+            fields={'name':row.name,'city':row.city,'sector':row.sector,'phone':normalize_phone(row.phone),'email':normalize_email(row.email),'canton':row.canton,'website':normalize_website(row.website),'facts':facts}
             if c:
                 for k,v in fields.items():
                     if k not in c.manual_fields:setattr(c,k,v)
                 updated+=1
             else:
                 c=Company(identity=key,**fields);db.add(c);db.flush();created+=1
-            c.score=score_company(c)
+            c.contacts=[x for x in c.contacts if x.get('origin')!='user-import']+[contact(k,getattr(c,k),row.source_url,now(),'user-import','user_supplied') for k in ('phone','email','website') if getattr(c,k) and k not in c.manual_fields]
+            c.score=score_company(c,current_weights(db));c.quality_score=quality_score(c)
             db.add(SourceRecord(company_id=c.id,payload=row.model_dump()))
         db.commit()
     return {'created':created,'updated':updated,'source':'user-import','external_discovery_verified':False}
@@ -342,3 +352,39 @@ def mark_distinct(id:str,data:DistinctPair):
         value={'pairs':list(set((s.value.get('pairs',[]) if s else [])+[pair]))}
         db.merge(Setting(key='distinct_pairs',value=value));db.add(Activity(company_id=id,kind='change',text='Entreprises déclarées distinctes : '+data.other_id));db.commit()
         return {'state':'distinct'}
+
+
+class EnrichmentConsent(BaseModel):
+    authorized:bool
+    official_site_confirmed:bool
+@app.post('/api/companies/{id}/enrich')
+def enrich_company(id:str,consent:EnrichmentConsent):
+    if not consent.authorized or not consent.official_site_confirmed:raise HTTPException(422,'Autorisation de réutilisation et site officiel confirmé requis')
+    from app.enrichment import enrich_website,apply_enrichment
+    with Session() as db:
+        c=must(db,Company,id)
+        if c.suppressed:raise HTTPException(409,'Entreprise exclue de la prospection')
+        if not c.website:raise HTTPException(422,'Aucun site identifié')
+        website=c.website;result=enrich_website(website)
+        # Re-read to respect manual edits and suppression made during network I/O.
+        db.refresh(c)
+        if c.suppressed:raise HTTPException(409,'Entreprise exclue pendant le traitement')
+        if c.website!=website:raise HTTPException(409,'Site modifié pendant l’enrichissement ; résultat non appliqué')
+        apply_enrichment(c,result)
+        db.add(SourceRecord(company_id=id,payload={'kind':'authorized-enrichment',**result}))
+        c.quality_score=quality_score(c);db.commit()
+        return result
+@app.post('/api/companies/{id}/audit')
+def audit_company(id:str,consent:EnrichmentConsent):
+    if not consent.authorized or not consent.official_site_confirmed:raise HTTPException(422,'Autorisation et site officiel confirmé requis')
+    from app.network import audit_website
+    with Session() as db:
+        c=must(db,Company,id)
+        if c.suppressed:raise HTTPException(409,'Entreprise exclue')
+        if not c.website:raise HTTPException(422,'Site absent')
+        website=c.website;result=audit_website(website);db.refresh(c)
+        if c.suppressed:raise HTTPException(409,'Entreprise exclue pendant l’audit')
+        if c.website!=website:raise HTTPException(409,'Site modifié pendant l’audit ; résultat non appliqué')
+        c.audit=result;c.score=score_company(c,current_weights(db));c.quality_score=quality_score(c)
+        db.add(SourceRecord(company_id=id,payload={'kind':'website-audit',**result}));db.commit()
+        return result

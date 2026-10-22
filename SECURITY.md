@@ -28,3 +28,7 @@ Pas de purge automatique ou suppression sélective en V0.1. Pour effacer totalem
 ## Incident
 
 Arrêter les services via Stop. Conserver les logs et sauvegardes hors partage public ; consulter Diagnostics pour l’identifiant, le composant et la date. Ne jamais copier de secrets ou de bases réelles dans un ticket public. Ne pas modifier les règles TLS ou contourner un refus d’une source pour obtenir un audit positif.
+
+## V1.1
+
+Les enrichissements demandent une autorisation et une confirmation du caractère officiel du site ; seules les pages du même site et les boîtes génériques sont considérées. Les numéros marqués privés/mobiles/directs ne sont pas extraits. Les liens mailto encodent les caractères réservés. Les accès réseau conservent le DNS épinglé et ne suivent aucune redirection d’accueil/contact. Les timeouts ont un seul nouvel essai, sans retry des refus. Lighthouse automatique reste désactivé faute de contrôle de ses sous-requêtes réseau ; la présence de Chromium seule ne suffit pas à garantir l’isolation. Migration 0003 précédée d’une sauvegarde via le gestionnaire supporté, aucun rajeunissement artificiel des sources.

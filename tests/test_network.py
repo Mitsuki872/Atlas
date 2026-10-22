@@ -9,9 +9,10 @@ def test_dns_rebinding_mixed_addresses(monkeypatch):
     with pytest.raises(ValueError):validate_url('http://example.test')
 def test_missing_site_is_not_nonexistent():
     result=audit_website('');assert result['state']=='unknown'
-    assert 'non identifié' in result['findings'][0]['message']
+    assert result['findings']==[] and 'non identifié' in result['limitations'][0]
 def test_redirect_private_blocked(monkeypatch):
     import app.network as n
+    n._robots_cache.clear()
     monkeypatch.setattr(socket,'getaddrinfo',lambda host,*a,**kw:[(socket.AF_INET,socket.SOCK_STREAM,6,'',(host if host=='127.0.0.1' else '8.8.8.8',80))])
     class Response:
         status=302
@@ -26,6 +27,7 @@ def test_redirect_private_blocked(monkeypatch):
 
 def test_html_audit_with_observed_evidence(monkeypatch):
     import app.network as n
+    n._robots_cache.clear()
     monkeypatch.setattr(n,'validate_url',lambda url:(__import__('urllib.parse',fromlist=['urlsplit']).urlsplit(url),'8.8.8.8'))
     monkeypatch.setattr(n.time,'sleep',lambda *_:None)
     def fixture_fetch(url,**kwargs):
@@ -40,6 +42,7 @@ def test_html_audit_with_observed_evidence(monkeypatch):
 
 def test_robots_denial_not_scored_as_site_failure(monkeypatch):
     import app.network as n
+    n._robots_cache.clear()
     monkeypatch.setattr(n,'validate_url',lambda url:(__import__('urllib.parse',fromlist=['urlsplit']).urlsplit(url),'8.8.8.8'))
     monkeypatch.setattr(n.time,'sleep',lambda *_:None)
     calls=[]
