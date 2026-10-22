@@ -1,3 +1,15 @@
+# Validation complémentaire — correctif 1.1.1
+
+Résultat réel de `.venv/bin/python -m pytest -q` : **71 tests réussis, aucun échec ni test ignoré**, avec l’avertissement Starlette/AnyIO déjà présent. Les 11 cas supplémentaires couvrent 502 puis succès contrôlé, échecs répétés bornés, Retry-After numérique/date, 403/406 sans retry, 429 sans multiplication des requêtes, délai de reprise persistant partagé, préservation des entreprises/curseurs et des pauses/arrêts manuels.
+
+Les réponses HTTP de ces tests sont **contrôlées par MockTransport** ; un 502 puis 200 simulé n’est pas une preuve de rétablissement d’Overpass. Aucun changement d’instance ni de proxy n’est effectué. La disponibilité actuelle du service réel n’est pas revendiquée.
+
+Le scénario navigateur ajoute une campagne synthétique en échec 502 et vérifie le message, l’heure de reprise et le bouton Reprendre désactivé durant l’attente, tout en conservant le parcours V1.1. Aucun accès externe n’est effectué par ces tests.
+
+Aucune migration ni dépendance nouvelle. Le rapport V1.1 ci-dessous est conservé comme historique de sa validation.
+
+---
+
 # Rapport de validation — patch V1.1 — 22 octobre 2026
 
 ## Périmètre et verdict

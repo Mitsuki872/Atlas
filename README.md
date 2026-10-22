@@ -1,6 +1,10 @@
-# Prospect Engine — patch qualité 1.1.0
+# Prospect Engine — patch qualité 1.1.1
 
 Application locale de prospection B2B, en français. Le patch [V1.1 — Qualité des prospects](PATCH_V1_1.md) améliore le projet existant avec une migration additive et sauvegarde préalable. **La V1 intégrale n’est pas encore validée.** Consulter [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) et [TEST_REPORT.md](TEST_REPORT.md) avant utilisation.
+
+## Correctif 1.1.1
+
+Les pannes Overpass 502/503/504 sont expliquées et les reprises encadrées. Voir [PATCH_V1_1_1.md](PATCH_V1_1_1.md). Ce correctif n’établit pas la disponibilité du service externe.
 
 ## Nouveautés V1.1
 

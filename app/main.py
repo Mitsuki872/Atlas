@@ -18,7 +18,7 @@ from app.contacts import normalize_email, normalize_phone, normalize_website, co
 from app.filters import CompanyFilters, company_query
 from app.network import audit_capabilities
 
-app=FastAPI(title='Prospect Engine',version='1.1.0')
+app=FastAPI(title='Prospect Engine',version='1.1.1')
 STATIC=Path(__file__).parent/'static'
 TOKEN=secrets.token_urlsafe(32)
 @app.middleware('http')
@@ -76,6 +76,9 @@ def campaign_action(id:str,action:str):
         c.state=target
         if action=='start':db.add(Job(campaign_id=c.id))
         if action=='resume':
+            until=c.progress.get('source_retry_at')
+            if until and datetime.fromisoformat(until)>datetime.now(timezone.utc):raise HTTPException(409,'Délai Overpass en cours. Réessayez après '+until+' ; vos données sont conservées.')
+            c.error=None
             job=db.scalar(select(Job).where(Job.campaign_id==id).order_by(Job.created_at.desc()))
             if job:job.state='queued'
         db.commit();return serialize(c)
