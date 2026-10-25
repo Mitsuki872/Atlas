@@ -8,7 +8,7 @@ from app.contacts import osm_contacts
 from app.db import now
 from app.source_errors import SourceError,retry_after_seconds
 import re
-from app.business_search import KEYS,tag_for,matches
+from app.business_search import KEYS,tag_for,matches,rules_for,resolution
 
 class Connector(Protocol):
     id:str
@@ -42,9 +42,10 @@ def build_query(config):
     query+='.scope out count;'
     cap=min(100,config['max_prospects'])
     for sector in config['sectors']:
-        tag=tag_for(sector)
-        if tag:
-            key,value=tag;query+=f'nwr[{json.dumps(key)}={json.dumps(value)}]["name"](area.scope);out center tags {cap};'
+        rules=rules_for(sector)
+        if rules:
+            clauses=['nwr'+''.join(f'[{json.dumps(key)}={json.dumps(value)}]' for key,value in rule)+'["name"](area.scope);' for rule in rules]
+            query+=(clauses[0] if len(clauses)==1 else '('+''.join(clauses)+');')+f'out center tags {cap};'
         else:
             pattern=json.dumps(re.escape(sector),ensure_ascii=False)
             query+='('+''.join(f'nwr["{key}"~{pattern},i]["name"](area.scope);' for key in ('name',*KEYS))+f');out center tags {cap};'
@@ -78,7 +79,7 @@ class OverpassConnector:
                 pool=list(records.values())
                 counts=Counter(s for r in pool for s in r['facts'].get('categories',[r['sector']]))
                 selected=choose_records(pool,config['sectors'],config['max_prospects'],config.get('distribution','balanced'))
-                self.discovery_stats={'query_scope':{'canton':config['canton'],'municipality':config.get('city',''),'area_confirmed':True,'transport':'GET','server_memory_mib':64},'mode':config.get('distribution','balanced'),'sectors':{s:{'returned_candidates':counts[s],'available_total':None,'candidate_pool_may_be_truncated':counts[s]>=cap,'selected':sum(r['sector']==s for r in selected)} for s in config['sectors']},'limitations':['Nombre total de candidats inconnu ; sortie bornée par secteur. Pertinence = coordonnées disponibles dans le pool, pas intention d’achat.']}
+                self.discovery_stats={'query_scope':{'canton':config['canton'],'municipality':config.get('city',''),'area_confirmed':True,'transport':'GET','server_memory_mib':64},'mode':config.get('distribution','balanced'),'business_resolution':[resolution(s) for s in config['sectors']],'sectors':{s:{'returned_candidates':counts[s],'available_total':None,'candidate_pool_may_be_truncated':counts[s]>=cap,'selected':sum(r['sector']==s for r in selected)} for s in config['sectors']},'limitations':['Nombre total de candidats inconnu ; sortie bornée par secteur. Pertinence = coordonnées disponibles dans le pool, pas intention d’achat.']}
                 return selected
             except httpx.TimeoutException as exc:
                 if attempt==2:

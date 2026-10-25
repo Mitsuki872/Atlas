@@ -1,3 +1,11 @@
+# Validation 1.3.1
+
+144 tests backend réussis, aucun échec ni test ignoré (un avertissement Starlette/AnyIO). Sept nouveaux cas couvrent le libellé exact, accents/apostrophes, catégories multiples et exclusion des écoles/seniors/hébergement résidentiel. Recherche réelle hors ligne à Morges : 6 fiches pour le libellé utilisateur, dont 2 childcare et 4 kindergarten ; crèche seule : 2. Détails agrégés dans docs/CHILDCARE_MORGES_REAL_VALIDATION.json. Ni le total national ni les résultats de cet extrait ne sont présentés comme un recensement officiel.
+
+Parcours navigateur conservé avec ajout de l’aperçu activité reconnue/non reconnue. Pas de validation Windows ni d’accès Overpass réussi revendiqués.
+
+---
+
 # Validation 1.3 — 25 octobre 2026
 
 **137 tests backend réussis, 0 échec, 0 ignoré** ; un avertissement de dépréciation Starlette/AnyIO. Syntaxe JS, compilation Python et cohérence des dépendances vérifiées. Les tests de migration/restauration s’exécutent services arrêtés, dans des bases temporaires.

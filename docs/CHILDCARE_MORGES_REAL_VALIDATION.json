@@ -1,0 +1,114 @@
+{
+  "validated_at": "2026-10-25T12:19:56.326038+00:00",
+  "snapshot_at": "2026-10-20T20:23:47+00:00",
+  "scope": {
+    "canton": "Vaud",
+    "municipality": "Morges"
+  },
+  "offline": true,
+  "results": {
+    "Structure d'accueil pour enfants": {
+      "selected": 6,
+      "scope_indexed_objects": 628,
+      "resolution": [
+        {
+          "term": "Structure d'accueil pour enfants",
+          "method": "explicit_osm_categories",
+          "rules": [
+            [
+              {
+                "key": "amenity",
+                "value": "childcare"
+              }
+            ],
+            [
+              {
+                "key": "amenity",
+                "value": "kindergarten"
+              }
+            ],
+            [
+              {
+                "key": "amenity",
+                "value": "social_facility"
+              },
+              {
+                "key": "social_facility",
+                "value": "day_care"
+              },
+              {
+                "key": "social_facility:for",
+                "value": "child"
+              }
+            ]
+          ],
+          "note": "Correspondances explicites ; une recherche large peut inclure le préscolaire, sans garantir une place disponible ni une activité actuelle."
+        }
+      ],
+      "counts_by_amenity": {
+        "childcare": 2,
+        "kindergarten": 4
+      }
+    },
+    "crèche": {
+      "selected": 2,
+      "scope_indexed_objects": 628,
+      "resolution": [
+        {
+          "term": "crèche",
+          "method": "explicit_osm_categories",
+          "rules": [
+            [
+              {
+                "key": "amenity",
+                "value": "childcare"
+              }
+            ],
+            [
+              {
+                "key": "amenity",
+                "value": "social_facility"
+              },
+              {
+                "key": "social_facility",
+                "value": "day_care"
+              },
+              {
+                "key": "social_facility:for",
+                "value": "child"
+              }
+            ]
+          ],
+          "note": "Catégories OSM explicites."
+        }
+      ],
+      "counts_by_amenity": {
+        "childcare": 2,
+        "kindergarten": 0
+      }
+    },
+    "jardin d’enfants": {
+      "selected": 4,
+      "scope_indexed_objects": 628,
+      "resolution": [
+        {
+          "term": "jardin d’enfants",
+          "method": "explicit_osm_categories",
+          "rules": [
+            [
+              {
+                "key": "amenity",
+                "value": "kindergarten"
+              }
+            ]
+          ],
+          "note": "Catégories OSM explicites."
+        }
+      ],
+      "counts_by_amenity": {
+        "childcare": 0,
+        "kindergarten": 4
+      }
+    }
+  }
+}

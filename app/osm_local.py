@@ -7,7 +7,7 @@ from app.db import DATA
 from app.domain import normalize_name
 from app.connectors import OverpassConnector,choose_records
 from app.osm_index import SCHEMA
-from app.business_search import matches
+from app.business_search import matches,resolution
 
 FOLDER=DATA/'osm'
 class DatasetUnavailable(RuntimeError):pass
@@ -58,5 +58,5 @@ class LocalOSMConnector:
             r['contacts']=[{**c,'verified_at':meta['snapshot_at'],'origin':'osm-local','confidence':'reported_snapshot'} for c in r['contacts']]
             normalized.append(r)
         selected=choose_records(normalized,sectors,config['max_prospects'],config.get('distribution','balanced'))
-        self.discovery_stats={'source':'osm-local','snapshot_at':meta['snapshot_at'],'query_scope':{'canton':config['canton'],'municipality':config.get('city',''),'area_confirmed':True,'method':'osm_administrative_polygons'},'mode':config.get('distribution','balanced'),'sectors':{s:{'available_total':counts[s],'returned_candidates':counts[s],'selected':sum(r['sector']==s for r in selected),'candidate_pool_may_be_truncated':False} for s in sectors},'limitations':['Comptages exacts dans cet extrait pour les tags et entreprises nommées pris en charge, pas un recensement exhaustif du tissu économique.','Les coordonnées publiées ne sont pas vérifiées auprès des entreprises.']}
+        self.discovery_stats={'source':'osm-local','snapshot_at':meta['snapshot_at'],'query_scope':{'canton':config['canton'],'municipality':config.get('city',''),'area_confirmed':True,'method':'osm_administrative_polygons'},'mode':config.get('distribution','balanced'),'scope_indexed_objects':len(rows),'business_resolution':[resolution(s) for s in sectors],'sectors':{s:{'available_total':counts[s],'returned_candidates':counts[s],'selected':sum(r['sector']==s for r in selected),'candidate_pool_may_be_truncated':False} for s in sectors},'limitations':['Comptages exacts dans cet extrait pour les tags et entreprises nommées pris en charge, pas un recensement exhaustif du tissu économique.','Les coordonnées publiées ne sont pas vérifiées auprès des entreprises.']}
         return selected

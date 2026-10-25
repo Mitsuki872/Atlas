@@ -21,6 +21,8 @@ const assert=require('node:assert/strict');
 
  await page.getByRole('button',{name:'Nouvelle campagne'}).click();
  await page.locator('[name=name]').fill('QA navigateur — ne pas lancer');
+ await page.locator('[name=sectors_text]').fill("Structure d'accueil pour enfants");await page.locator('[name=sectors_text]').press('Tab');await page.waitForFunction(()=>document.querySelector('#business-resolution')?.textContent.includes('catégorie reconnue'));
+ await page.locator('[name=sectors_text]').fill('métier spécialisé');await page.locator('[name=sectors_text]').press('Tab');await page.waitForFunction(()=>document.querySelector('#business-resolution')?.textContent.includes('activité non reconnue'));
  await page.locator('[name=sectors_text]').fill('fleuriste, fiduciaire, métier spécialisé');
  await page.locator('[name=audit_mode]').selectOption('DEEP');
  await page.getByRole('button',{name:'Enregistrer la campagne',exact:true}).click();

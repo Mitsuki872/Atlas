@@ -20,7 +20,7 @@ from app.network import audit_capabilities
 from app.audits import refresh_qualification,persist_audit
 from app.scoring_api import router as scoring_router
 
-app=FastAPI(title='Prospect Engine',version='1.3.0')
+app=FastAPI(title='Prospect Engine',version='1.3.1')
 app.include_router(scoring_router)
 STATIC=Path(__file__).parent/'static'
 TOKEN=secrets.token_urlsafe(32)

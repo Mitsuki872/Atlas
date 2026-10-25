@@ -189,3 +189,9 @@ def campaign_events(id:str):
         runs=list(db.scalars(select(AuditRun).where(AuditRun.campaign_id==id).order_by(AuditRun.started_at.desc()).limit(100)))
         events=[{'id':r.id+':'+str(i),'audit_id':r.id,'company_id':r.company_id,**s} for r in reversed(runs) for i,s in enumerate(r.stages)]
         return {'campaign_id':id,'state':campaign.state,'progress':campaign.progress,'events':events,'measured_api_cost_chf':0,'paid_provider_status':'not_configured','transport':'poll','truncated_to_last_audits':100}
+
+@router.get('/api/business/resolve')
+def resolve_business(term:str):
+    if not term.strip() or len(term)>100:raise HTTPException(422,'Activité de 1 à 100 caractères requise')
+    from app.business_search import resolution
+    return resolution(term)
