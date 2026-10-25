@@ -122,6 +122,11 @@ def import_archive(data:ArchiveImport):
                     except ValueError as exc:raise HTTPException(422,str(exc))
                 if key=='phone':value=normalize_phone(value)
                 if key=='email':value=normalize_email(value)
+                if key=='status':
+                    from app.statuses import canonical_status,STATUSES
+                    if value=='Ne plus contacter':c.suppressed=1
+                    value=canonical_status(value)
+                    if value not in STATUSES:value='À contacter'
                 setattr(c,key,value)
             c.contacts=list({(x.get('kind'),x.get('value'),x.get('source')):x for x in [*raw.get('contacts',[]),*c.contacts] if isinstance(x,dict)}.values())
             c.manual_fields=list(protected|set(str(x) for x in raw.get('manual_fields',[])))

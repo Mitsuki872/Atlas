@@ -1,3 +1,9 @@
+# Version 1.5 — limites actuelles
+
+Aucun moteur payant ni clé API dans le produit actif. Les domaines absents des sources gratuites peuvent rester inconnus ; un site qui refuse la collecte n’est pas contourné. Les liens s’ouvrent directement dans le navigateur, mais une erreur/panne externe reste possible. Vérifications HTML et présence OSM partielles, pas de classement Google ni Lighthouse/IA inventés. Les proportions de contrôles affichées ne sont pas des notes complètes lorsque la couverture manque.
+
+Les lots visent 25 nouveaux candidats maximum ; source épuisée/tri de qualité peuvent donner moins de résultats exploitables. Les fiches à vérifier sont conservées, pas effacées. Windows reste à valider sur le poste utilisateur. Voir SIMPLE_WORKFLOW_V1_5.md. Les limites ci-dessous sont historiques ; les mentions de clé/moteur de la version 1.4 sont obsolètes.
+
 # Limites 1.4
 
 La refonte est testée sur navigateur Linux (1440/390 px), pas sur Windows. La recherche générale de sites utilise Brave Search API uniquement avec clé et autorisations/quota configurés. Aucun compte gratuit n’est promis. Sans cela : sources locales, candidats et état indisponible explicite. Aucun accès Brave réel validé dans cette session. Le robots.txt du site des P’tits Loups fourni par l’utilisateur a répondu HTTP 403 : pas d’extraction de ses coordonnées revendiquée. Pas de contournement. Le nom seul ne permet pas de confirmer un domaine ; certaines fiches pauvres nécessitent une vérification humaine.

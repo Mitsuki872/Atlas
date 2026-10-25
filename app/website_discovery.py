@@ -5,15 +5,13 @@ import re
 import sqlite3
 from datetime import datetime,timezone,timedelta
 from urllib.parse import urlsplit
-import httpx
 from bs4 import BeautifulSoup
 from sqlalchemy import select
 from app.db import Session,Company,WebsiteJob,Setting,SourceRecord,now,serialize
 from app.contacts import normalize_website,normalize_phone,normalize_email,contact,quality_score
 from app.business_search import norm
-from app.network import fetch_discovery_page
+from app.network import fetch_discovery_page,audit_website
 from app.enrichment import enrich_website,apply_enrichment
-from app.search_credentials import search_key
 
 DIRECTORY_DOMAINS={'facebook.com','instagram.com','linkedin.com','local.ch','search.ch','google.com','tripadvisor.com','yelp.com','youtube.com','tiktok.com'}
 PUBLIC_MAIL={'gmail.com','hotmail.com','outlook.com','yahoo.com','bluewin.ch','icloud.com','proton.me','protonmail.com','gmx.ch','sunrise.ch','hispeed.ch'}
@@ -25,31 +23,12 @@ def domain(url):
 def standalone(url):
     host=domain(url)
     return host and not any(host==d or host.endswith('.'+d) for d in DIRECTORY_DOMAINS)
-def search_settings(db):
-    saved=db.get(Setting,'website_search');return saved.value if saved else {'authorized':False,'daily_limit':25,'free_quota_confirmed':False}
 def provider_status(db):
-    settings=search_settings(db)
-    return {'provider':'Brave Search API','configured':bool(search_key()),'authorized':settings['authorized'],'free_quota_confirmed':settings['free_quota_confirmed'],'daily_limit':settings['daily_limit'],'local_sources':True,'reason':'Une clé et une autorisation sont nécessaires pour une recherche web générale ; aucun moteur HTML n’est scrapé.'}
-def reserve_search(db):
-    config=search_settings(db)
-    if not search_key():raise RuntimeError('SEARCH_PROVIDER_NOT_CONFIGURED : clé Brave absente ; seules les sources locales sont disponibles.')
-    if not config['authorized'] or not config['free_quota_confirmed']:raise RuntimeError('SEARCH_NOT_AUTHORIZED : confirmer une offre/quota sans coût avant toute requête ; aucun service payant automatique.')
-    day=datetime.now(timezone.utc).date().isoformat();key='website_search_usage:'+day
-    db.connection().exec_driver_sql('BEGIN IMMEDIATE')
-    usage=db.get(Setting,key);count=usage.value['requests'] if usage else 0
-    if count>=config['daily_limit']:raise RuntimeError('SEARCH_DAILY_LIMIT : limite quotidienne atteinte, aucun appel effectué.')
-    db.merge(Setting(key=key,value={'requests':count+1}));db.commit()
-def brave_search(company):
-    with Session() as db:reserve_search(db)
-    query='"'+company['name'].replace('"','')+'" '+company.get('city','')+' Suisse site officiel'
-    with httpx.Client(timeout=12,follow_redirects=False) as client:
-        r=client.get('https://api.search.brave.com/res/v1/web/search',params={'q':query,'count':5,'country':'CH','search_lang':'fr'},headers={'X-Subscription-Token':search_key(),'User-Agent':'ProspectEngine/1.4 (authorized business website search)','Accept':'application/json'})
-        if r.status_code!=200:raise RuntimeError(f'SEARCH_HTTP_{r.status_code} : recherche indisponible ; aucun contournement ni changement de moteur.')
-        if len(r.content)>1_000_000:raise RuntimeError('Réponse de recherche trop volumineuse')
-        data=r.json()
-    return [{'url':x['url'],'source':'authorized_search_api','source_url':x['url'],'query':query,'excerpt':(x.get('title','')+' '+x.get('description',''))[:1000]} for x in data.get('web',{}).get('results',[])[:5] if x.get('url')]
+    return {'provider':'Sources publiques locales','configured':True,'cost_chf':0,'local_sources':True,'general_search_available':False,'reason':'Aucun moteur payant ni clé API. Sources OSM et domaines déjà connus uniquement.'}
 def local_candidates(company):
-    candidates=[];tags=company.get('facts',{}).get('raw_tags',{})
+    candidates=[]
+    if company.get('website'):candidates.append({'url':company['website'],'source':'known_company_website','source_url':company.get('facts',{}).get('source','')})
+    tags=company.get('facts',{}).get('raw_tags',{})
     for key in ('website','contact:website','url','operator:website','brand:website'):
         if tags.get(key):candidates.append({'url':tags[key],'source':'osm_tag','source_url':company.get('facts',{}).get('source',''),'field':key})
     for c in company.get('contacts',[]):
@@ -82,12 +61,29 @@ def inspect_candidate(company,candidate,fetcher=fetch_discovery_page):
         if code!=200 or 'text/html' not in headers.get('content-type',''):value.update(state='blocked',reason=f'HTML non vérifiable (HTTP {code})');return value
         if domain(final)!=domain(url):value.update(state='review_required',reason='Domaine de destination différent : vérification nécessaire.');return value
         soup=BeautifulSoup(html,'html.parser')
+        structured=[]
+        def fields(value,depth=0):
+            if depth>8:return
+            if isinstance(value,dict):
+                for key,item in value.items():
+                    if key in ('name','addressLocality','streetAddress','postalCode','telephone','email') and isinstance(item,str):structured.append(item[:300])
+                    elif isinstance(item,(dict,list)):fields(item,depth+1)
+            elif isinstance(value,list):
+                for item in value[:30]:fields(item,depth+1)
+        for script in soup.find_all('script',attrs={'type':'application/ld+json'})[:5]:
+            try:fields(json.loads(script.string or script.get_text()))
+            except (ValueError,TypeError):pass
         for tag in soup(['script','style','noscript']):tag.decompose()
-        text=soup.get_text(' ',strip=True);normalized=norm(text);tokens=set(words(text));wanted=set(words(company['name']))
+        text=soup.get_text(' ',strip=True)+' '+' '.join(structured);normalized=norm(text);tokens=set(words(text));wanted=set(words(company['name']))
         name_match=bool(wanted) and wanted.issubset(tokens)
         city_match=bool(company.get('city') and re.search(r'(?<!\w)'+re.escape(norm(company['city']))+r'(?!\w)',normalized))
         phone=normalize_phone(company.get('phone',''));phones={normalize_phone(a['href']) for a in soup.select('a[href^="tel:"]')}
+        if phone:
+            digits=phone.lstrip('+');variants=[digits,'00'+digits]
+            if digits.startswith('41'):variants.append('0'+digits[2:])
+            if any(re.search(r'(?<!\d)'+r'[\s()./-]*'.join(map(re.escape,v))+r'(?!\d)',text) for v in variants):phones.add(phone)
         email=normalize_email(company.get('email',''));emails={normalize_email(a['href']) for a in soup.select('a[href^="mailto:"]')}
+        if email and re.search(r'(?<![\w.-])'+re.escape(email)+r'(?![\w.-])',text,re.I):emails.add(email)
         address=company.get('facts',{}).get('address_parts',{});street=norm(address.get('street',''));number=address.get('number','')
         street_match=bool(street and number and street in normalized and re.search(r'(?<!\w)'+re.escape(number)+r'(?!\w)',normalized))
         fields=[k for k,ok in [('name',name_match),('locality',city_match),('phone',bool(phone and phone in phones)),('email',bool(email and email in emails)),('address',street_match)] if ok]
@@ -99,7 +95,7 @@ def inspect_candidate(company,candidate,fetcher=fetch_discovery_page):
     except Exception as exc:value.update(state='blocked',reason=f'{type(exc).__name__}: {exc}')
     return value
 
-def discover(company,manual_candidate='',searcher=brave_search,fetcher=fetch_discovery_page,cancelled=lambda:False):
+def discover(company,manual_candidate='',searcher=None,fetcher=fetch_discovery_page,cancelled=lambda:False):
     result={'state':'not_found','checked_at':now(),'candidates':[],'sources':[],'limitations':[],'applied':False}
     if cancelled():result['state']='cancelled';return result
     candidates=local_candidates(company)
@@ -114,8 +110,9 @@ def discover(company,manual_candidate='',searcher=brave_search,fetcher=fetch_dis
     def search_once():
         nonlocal searched
         searched=True
-        try:add(searcher(company));result['sources'].append('authorized_search_api')
-        except Exception as exc:result['limitations'].append(str(exc))
+        if searcher is not None:
+            add(searcher(company));result['sources'].append('controlled_test_source')
+        else:result['limitations'].append('Aucune URL dans les sources gratuites disponibles. Cela ne prouve pas l’absence de site.')
     add(candidates)
     if not unique:search_once()
     for candidate in list(unique.values())[:5]:
@@ -141,8 +138,8 @@ def queue(db,company,force=False,candidate=''):
     active=db.scalar(select(WebsiteJob).where(WebsiteJob.company_id==company.id,WebsiteJob.state.in_(['queued','running','paused'])))
     if active:return active
     previous=db.scalar(select(WebsiteJob).where(WebsiteJob.company_id==company.id).order_by(WebsiteJob.created_at.desc()))
-    if not force and previous and datetime.fromisoformat(previous.updated_at)>datetime.now(timezone.utc)-timedelta(hours=24):return previous
-    job=WebsiteJob(company_id=company.id,config={'candidate':candidate,'original_website':company.website});db.add(job);db.flush();return job
+    if not force and previous and previous.config.get('checks_version')=='free-1.5' and datetime.fromisoformat(previous.updated_at)>datetime.now(timezone.utc)-timedelta(hours=24):return previous
+    job=WebsiteJob(company_id=company.id,config={'candidate':candidate,'original_website':company.website,'checks_version':'free-1.5'});db.add(job);db.flush();return job
 
 def process_website_job(id,stop_event):
     with Session() as db:
@@ -151,13 +148,14 @@ def process_website_job(id,stop_event):
         c=db.get(Company,job.company_id)
         if c.suppressed:job.state='blocked';job.error='Entreprise exclue';job.updated_at=now();db.commit();return
         if stop_event.is_set():return
-        job.state='running';job.updated_at=now();snapshot=serialize(c);config=dict(job.config);db.commit()
+        job.state='running';job.config={**job.config,'checks_version':'free-1.5'};job.updated_at=now();snapshot=serialize(c);config=dict(job.config);db.commit()
     def cancelled():
         if stop_event.is_set():return True
         with Session() as db:
             current=db.get(WebsiteJob,id);return not current or current.state not in ('queued','running')
     result=discover(snapshot,config.get('candidate',''),cancelled=cancelled)
     enriched=enrich_website(result['selected']['final_url']) if result['state']=='confirmed' and not cancelled() else None
+    checked_audit=audit_website(result['selected']['final_url'],{'max_pages':3,'max_depth':1,'retries':1,'timeout_seconds':4}) if result['state']=='confirmed' and not cancelled() else None
     with Session() as db:
         job=db.get(WebsiteJob,id);c=db.get(Company,job.company_id)
         if job.state not in ('queued','running'):return
@@ -171,9 +169,16 @@ def process_website_job(id,stop_event):
                 c.identification={**c.identification,'website_status':'OFFICIAL_SITE_CONFIRMED','website':c.website,'confidence':selected['confidence'],'matched_fields':selected['matched_fields'],'evidence':selected['evidence'],'checked_at':now(),'verification_method':'automatic_multifield_official_site','reason':selected['reason']}
                 c.contacts=[*c.contacts,contact('website',c.website,selected['final_url'],now(),'verified-discovery','observed_public')]
                 if enriched:apply_enrichment(c,enriched)
+                if checked_audit:
+                    c.facts={**c.facts,'last_site_attempt':{'state':checked_audit['state'],'checked_at':checked_audit.get('checked_at'),'error':checked_audit.get('error')}}
+                    if checked_audit['state']=='observed' or c.audit.get('state')!='observed':c.audit=checked_audit
                 result['applied']=True
             c.facts={**c.facts,'website_discovery':result};c.quality_score=quality_score(c)
-            from app.audits import refresh_qualification
-            refresh_qualification(db,c)
+            from app.audits import persist_audit
+            from app.free_checks import presence_observations
+            from app.screening import screen
+            visibility,proofs=presence_observations(c)
+            persist_audit(db,c,[*c.audit.get('criterion_observations',[]),*visibility],[*c.audit.get('evidence',[]),*proofs])
+            c.facts={**c.facts,'screening':screen(c)}
             db.add(SourceRecord(company_id=c.id,payload={'kind':'official-website-discovery',**result}));job.state='completed'
         job.result=result;job.updated_at=now();db.commit()

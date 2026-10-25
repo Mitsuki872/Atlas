@@ -44,3 +44,7 @@ Identification officielle multi-champs avant audit ; observations externes stric
 
 ## 1.4
 Recherche web opt-in avec clé/autorisation et quota sans coût confirmé, réservation SQL quotidienne avant appel. Clé BRAVE_SEARCH_API_KEY ou fichier local data/search-provider.env non inclus dans SQLite/exports/ZIP ; format validé, permissions POSIX 0600, aucune valeur retournée par les API. Sous Windows, protéger le dossier local. Pas de scraping de SERP HTML. Résultats moteur non fiables : URL validée, DNS public épinglé/robots sur chaque redirection (max. 3), pas de CAPTCHA/refus contourné. Coordonnées personnelles non aspirées en masse, preuves minimisées. Candidats incertains non associés comme sites officiels ; corrections/oppositions conservées ; nouveaux domaines n’héritent pas des notes de l’ancien. Les sélections ATLAS sont des identifiants en stockage navigateur local.
+
+
+## 1.5
+Intégration commerciale retirée, aucun appel moteur/clé ; module et fichier local de clé retirés après migration réussie. Les archives et comptes chez le fournisseur ne sont pas modifiés. Oppositions conservées séparément des cinq statuts. Aucune donnée supprimée par le tri commercial ; mesures bloquées inconnues. Liens publics externes directs, adresses invalides sans lien placeholder. Copie de coordonnées sur geste utilisateur, aucun appel/envoi déclenché. Données structurées lues comme JSON, jamais exécutées. Scripts de statut/suggestion limitent les valeurs métier et échappent les libellés affichés.

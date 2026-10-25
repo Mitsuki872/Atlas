@@ -4,7 +4,11 @@ from datetime import datetime,timezone,timedelta
 from sqlalchemy import select,func
 import pytest
 from app.db import Session,Company,WebsiteJob,Setting,now
-from app.website_discovery import discover,inspect_candidate,local_candidates,queue,process_website_job,brave_search,reserve_search,provider_status
+from app.website_discovery import discover,inspect_candidate,local_candidates,queue,process_website_job,provider_status
+
+@pytest.fixture(autouse=True)
+def no_live_website_audits(monkeypatch):
+    monkeypatch.setattr('app.website_discovery.audit_website',lambda *a,**kw:{'state':'unavailable','checked_at':now(),'findings':[],'error':'Controlled fixture: no external request'})
 
 HTML='<html><title>Les P’tits Loups</title><h1>Les P’tits Loups</h1><p>Accueil à Morges</p><a href="tel:+41210000001">Accueil</a><a href="mailto:info@fixture.example">Contact</a></html>'
 def company(**kw):return {'name':"Les P'tits Loups",'city':'Morges','canton':'Vaud','phone':'+41210000001','email':'','website':'','contacts':[],'facts':{'source':'https://example.org/osm-fixture'},**kw}
@@ -20,10 +24,8 @@ def test_confirm_name_locality_and_phone_but_not_name_alone():
     assert inspect_candidate(company(name='Another nursery'),candidate,fetcher)['state']=='rejected'
 
 def test_sparse_ptits_loups_no_hardcoded_domain(monkeypatch):
-    monkeypatch.delenv('BRAVE_SEARCH_API_KEY',raising=False)
     def must_not_request(*a,**kw):pytest.fail('No engine configured, no network call')
-    monkeypatch.setattr('app.website_discovery.httpx.Client',must_not_request)
-    result=discover(company(phone='',facts={}),searcher=brave_search,fetcher=must_not_request)
+    result=discover(company(phone='',facts={}),fetcher=must_not_request)
     assert result['state']=='source_unavailable' and result['candidates']==[] and not result['applied']
     assert 'lesptitsloups.ch' not in str(result)
 
@@ -48,13 +50,6 @@ def test_candidates_from_existing_contacts_email_domain_not_personal_mail():
     r=local_candidates(company(email='info@business-fixture.example'))
     assert r[0]['url']=='https://business-fixture.example' and r[0]['source']=='derived_business_email_domain'
     assert local_candidates(company(email='private@gmail.com'))==[]
-
-def test_usage_quota_reservation_before_calls(monkeypatch):
-    monkeypatch.setenv('BRAVE_SEARCH_API_KEY','synthetic-never-sent')
-    with Session() as db:
-        db.merge(Setting(key='website_search',value={'authorized':True,'free_quota_confirmed':True,'daily_limit':1}));db.commit();reserve_search(db)
-        with pytest.raises(RuntimeError,match='SEARCH_DAILY_LIMIT'):reserve_search(db)
-    with Session() as db:assert provider_status(db)['configured'] is True
 
 def test_jobs_idempotent_cache_and_manual_website_preserved(client,monkeypatch):
     with Session() as db:
@@ -83,12 +78,11 @@ def test_cancel_and_suppression_no_network(client,monkeypatch):
     client.patch(f'/api/companies/{id}',json={'status':'Ne plus contacter'})
     assert client.post(f'/api/companies/{id}/find-website',json={'force':True}).status_code==409
 
-def test_crm_board_counts_and_planning_do_not_duplicate_table(client):
-    with Session() as db:
-        for i,status in enumerate(['Nouveau','À appeler','Contacté','Client']):db.add(Company(identity=f'board:{i}',name=f'Board {i}',status=status))
-        db.commit()
-    board=client.get('/api/crm/board').json();assert board['total']==4 and len(board['columns'])==5
-    assert sum(c['total'] for c in board['columns'])==4
+def test_removed_services_and_atlas_preserved(client):
+    assert client.get('/api/crm/board').status_code==404
+    assert client.post('/api/settings/website-search/credential',json={'api_key':'obsolete'}).status_code==404
+    status=client.get('/api/settings/website-search').json()
+    assert status['cost_chf']==0 and status['general_search_available'] is False
     assert client.post('/api/planning/workspace',json={'ids':['missing']}).json()['missing_ids']==['missing']
 
 def test_redirects_checked_on_every_target(monkeypatch):
@@ -100,19 +94,6 @@ def test_redirects_checked_on_every_target(monkeypatch):
     monkeypatch.setattr(n,'fetch_allowed',allowed)
     assert n.fetch_discovery_page('https://first.example/')[3]=='https://next.example/'
     assert calls==['https://first.example/','https://next.example/']
-
-def test_credential_local_env_not_database_export_or_response(client,tmp_path,monkeypatch):
-    import app.search_credentials as credentials
-    monkeypatch.setattr(credentials,'FILE',tmp_path/'secret.env')
-    key='synthetic-key-never-used-for-a-live-request'
-    r=client.post('/api/settings/website-search/credential',json={'api_key':key})
-    assert r.status_code==200 and key not in r.text
-    assert credentials.search_key()==key
-    status=client.get('/api/settings/website-search');assert status.json()['configured'] is True and key not in status.text
-    assert key not in client.get('/api/export').text
-    with Session() as db:assert all(key not in str(x.value) for x in db.scalars(select(Setting)))
-    invalid=client.post('/api/settings/website-search/credential',json={'api_key':'bad secret with spaces'})
-    assert invalid.status_code==422 and 'bad secret with spaces' not in invalid.text
 
 def test_migration_0005_to_0006_keeps_crm_history_and_source_files(tmp_path):
     import subprocess,os,sys,textwrap
@@ -135,7 +116,7 @@ def test_migration_0005_to_0006_keeps_crm_history_and_source_files(tmp_path):
     migrate()
     with Session() as db:
         c=db.get(Company,cid);assert c.suppressed==1 and c.phone=='+41210000099' and c.manual_fields==['phone']
-        assert db.scalar(select(func.count()).select_from(Activity))==1
+        assert db.scalar(select(func.count()).select_from(Activity).where(Activity.kind=='note'))==1
         assert db.scalar(select(func.count()).select_from(AuditRun))==1
         assert db.scalar(select(func.count()).select_from(Membership))==1
         assert db.scalar(select(func.count()).select_from(WebsiteJob))==0
@@ -176,24 +157,6 @@ def test_campaign_pause_resume_stop_controls_its_website_queue(client):
     with Session() as db:assert db.get(WebsiteJob,jid).state=='queued'
     assert client.post(f'/api/campaigns/{cid}/stop').status_code==200
     with Session() as db:assert db.get(WebsiteJob,jid).state=='cancelled'
-
-def test_brave_adapter_http_contract_and_no_secret_in_errors(monkeypatch):
-    import httpx
-    import app.website_discovery as module
-    monkeypatch.setenv('BRAVE_SEARCH_API_KEY','synthetic-never-live')
-    with Session() as db:db.merge(Setting(key='website_search',value={'authorized':True,'free_quota_confirmed':True,'daily_limit':3}));db.commit()
-    seen=[];status=[200]
-    def handler(request):
-        assert request.url.host=='api.search.brave.com'
-        assert request.headers['X-Subscription-Token']=='synthetic-never-live'
-        assert 'Morges' in request.url.params['q'];seen.append(request)
-        return httpx.Response(status[0],json={'web':{'results':[{'url':'https://candidate.example','title':'Synthetic result','description':'Not a real engine result'}]}})
-    original=httpx.Client
-    monkeypatch.setattr(module.httpx,'Client',lambda **kw:original(**kw,transport=httpx.MockTransport(handler)))
-    assert brave_search(company())[0]['url']=='https://candidate.example' and len(seen)==1
-    status[0]=403
-    with pytest.raises(RuntimeError) as error:brave_search(company())
-    assert '403' in str(error.value) and 'synthetic-never-live' not in str(error.value)
 
 def test_same_manually_entered_domain_verified_without_erasing_existing_audit(client,monkeypatch):
     import copy

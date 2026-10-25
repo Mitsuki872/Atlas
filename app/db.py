@@ -38,7 +38,7 @@ class Company(Base):
     contacts: Mapped[list] = mapped_column(JSON, default=list)
     quality_score: Mapped[dict] = mapped_column(JSON, default=dict)
     website: Mapped[str] = mapped_column(String(2000), default='')
-    status: Mapped[str] = mapped_column(String(50), default='Nouveau', index=True)
+    status: Mapped[str] = mapped_column(String(50), default='À contacter', index=True)
     suppressed: Mapped[int] = mapped_column(Integer, default=0)
     facts: Mapped[dict] = mapped_column(JSON, default=dict)
     audit: Mapped[dict] = mapped_column(JSON, default=dict)

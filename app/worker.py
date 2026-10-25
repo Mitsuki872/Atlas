@@ -38,6 +38,8 @@ def process_job(job_id,connector=None):
                 db.merge(Setting(key='overpass_last_request',value={'time':time.time()}))
             campaign.progress={**campaign.progress,'stage':'discovery'}
             config=dict(campaign.config);db.commit()
+            previous_runs=db.scalar(select(__import__('sqlalchemy').func.count()).select_from(Job).where(Job.campaign_id==campaign.id))
+            if previous_runs>1:config['exclude_identities']=list(db.scalars(select(Company.identity).join(Membership,Membership.company_id==Company.id).where(Membership.campaign_id==campaign.id)))
             records=connector.discover(config)
             job.records=records
             campaign.progress={**progress(),'discovered':len(records),'remaining':len(records),'possibly_truncated':len(records)>=config['max_prospects'],'distribution':getattr(connector,'discovery_stats',{})}
@@ -62,16 +64,19 @@ def process_job(job_id,connector=None):
             if config.get('city') and not campaign.progress.get('distribution',{}).get('query_scope',{}).get('area_confirmed') and normalize_name(config['city'])!=normalize_name(record['city']):excluded=True
             existing=db.scalar(select(Company).where(Company.identity==record['identity']))
             suppressed=bool(existing and existing.suppressed)
-            website=existing.website if existing and 'website' in existing.manual_fields else record['website']
+            website=existing.website if existing and ('website' in existing.manual_fields or not record['website']) else record['website']
             cached=dict(existing.audit) if existing and existing.website==website else {}
             identity_valid=bool(existing and existing.identification.get('website_status')=='OFFICIAL_SITE_CONFIRMED' and existing.identification.get('website',existing.website)==website)
             cursor=job.cursor;campaign_id=campaign.id
-        audit=None;enrichment=None
+        audit=None;enrichment=None;checked_identity=None
         if not excluded and not suppressed:
             from datetime import datetime,timezone,timedelta
             checked=cached.get('checked_at')
             fresh=checked and datetime.fromisoformat(checked)>datetime.now(timezone.utc)-timedelta(hours=24)
-            if config['audit_web'] and not fresh and identity_valid:audit=audit_website(website)
+            if config.get('audit_web',True) and not config.get('checks_async',True) and not fresh and website:
+                from app.free_checks import check_site
+                snapshot={**record,'website':website,'identification':existing.identification if existing else {}}
+                checked_site=check_site(snapshot);audit=checked_site.get('audit');checked_identity=checked_site.get('identity')
             if config.get('enrich_contacts') and website:enrichment=enrich_website(website)
         with Session() as db:
             job=db.get(Job,job_id);campaign=db.get(Campaign,campaign_id)
@@ -89,7 +94,10 @@ def process_job(job_id,connector=None):
                     for key in ('name','city','canton','sector','phone','email','website','facts'):
                         if prefer_incoming and key not in company.manual_fields and key in record:
                             if key in ('phone','email','website') and not record[key] and getattr(company,key):continue
-                            setattr(company,key,record[key])
+                            if key=='facts':
+                                derived={k:company.facts[k] for k in ('website_discovery','screening','last_enrichment') if k in company.facts}
+                                setattr(company,key,{**record[key],**derived})
+                            else:setattr(company,key,record[key])
                     if company.website!=website and audit is not None:audit=None
                     if company.identification.get('website') and company.identification['website']!=company.website:company.identification={};company.audit={}
                     saved={(c['kind'],c['value'],c.get('source')):c for c in company.contacts}
@@ -98,6 +106,7 @@ def process_job(job_id,connector=None):
                         if key not in saved or item.get('verified_at','')>=saved[key].get('verified_at',''):saved[key]=item
                     company.contacts=list(saved.values())
                     if company.website==website:
+                        if checked_identity:company.identification=checked_identity
                         if audit and audit.get('checked_at','')>=company.audit.get('checked_at',''):company.audit=audit
                         if enrichment:apply_enrichment(company,enrichment)
                     p['enriched']+=1
@@ -107,8 +116,12 @@ def process_job(job_id,connector=None):
                     company.score=score_company(company,weights.value if weights else None);company.quality_score=quality_score(company)
                     company.verified_at=incoming if is_new and incoming else max(company.verified_at,incoming)
                     from app.audits import persist_audit
-                    persist_audit(db,company,campaign=campaign,mode=config.get('audit_mode','QUICK'))
-                    if config.get('discover_websites',False) and not company.website:
+                    from app.free_checks import presence_observations
+                    visibility,proofs=presence_observations(company)
+                    persist_audit(db,company,[*company.audit.get('criterion_observations',[]),*visibility],[*company.audit.get('evidence',[]),*proofs],campaign=campaign,mode=config.get('audit_mode','QUICK'))
+                    from app.screening import screen
+                    company.facts={**company.facts,'screening':screen(company)}
+                    if (config.get('discover_websites',False) and not company.website) or (config.get('audit_web',True) and config.get('checks_async',True) and bool(company.website) and not fresh):
                         from app.website_discovery import queue
                         website_job=queue(db,company)
                         if website_job.state=='queued' and not website_job.config.get('campaign_id'):website_job.config={**website_job.config,'campaign_id':campaign.id}

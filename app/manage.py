@@ -16,6 +16,10 @@ def migrate():
     from alembic import command
     from alembic.config import Config
     command.upgrade(Config(str(Path(__file__).resolve().parents[1]/'alembic.ini')),'head')
+    # Explicitly retired integration; no provider account or remote key is touched.
+    (DATA/'search-provider.env').unlink(missing_ok=True)
+    (Path(__file__).parent/'search_credentials.py').unlink(missing_ok=True)
+    for compiled in (Path(__file__).parent/'__pycache__').glob('search_credentials.*.pyc'):compiled.unlink(missing_ok=True)
 
 def restore(path):
     # Called only by offline CLI, never by an API upload.

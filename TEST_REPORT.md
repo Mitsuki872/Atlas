@@ -1,3 +1,17 @@
+# Validation 1.5 — 25 octobre 2026
+
+**168 tests backend réussis, aucun échec ni test ignoré**, un avertissement Starlette/AnyIO. Tests isolés, restauration services arrêtés. Migration 0006→0007 réellement exécutée sur anciennes données : cinq statuts, trace des anciens états, téléphone/corrections conservés, opposition persistante et sauvegarde créée ; fichier de clé obsolète retiré.
+
+Tests nouveaux : collecte rapide avec contrôles gratuits mis en file sans attendre le réseau ; deux lots successifs de 25 identités distinctes (50 entreprises conservées, note antérieure intacte), refus de double relance active, dernier lot SQL 25 lignes ; suggestions Enfants/UAPE → Crèche et tea-room → Boulangerie sans filtrage par le mot saisi ; plus de 50 catégories. Tri commercial réversible, audit 403 jamais assimilé à mauvais site, absence de coordonnées rangée à vérifier, entreprise suffisamment mesurée sans besoin démontré non priorisée ; cinq statuts et opposition indépendante. Contrôles site et présence OSM sourcés ; rapprochement d’un numéro connu en texte simple/JSON-LD ; aucun appel fournisseur payant possible par les anciennes commandes.
+
+**Navigateur Chromium réel :** création du formulaire simplifié, choix des catégories suggérées, menus stylisés et cinq statuts colorés, commande réelle de relance à 25 (les tests de contenu de lots sont backend), sept filtres contacts, Exploitables/À vérifier/Toutes, persistance URL, coordonnées réellement copiées individuellement dans le presse-papiers. Page entreprise, notes, proportions 2/3 et 2/2 sur observations synthétiques déclarées, ATLAS et prompt réellement copié/persisté. Pipeline/Planification absents, aucune commande de clé API. Bureau 1440 px, mobile 390 px sans débordement, aucune erreur JS.
+
+Ouverture du site vérifiée dans un nouvel onglet avec URL et paramètres conservés, sur une page externe contrôlée explicitement. Cela ne valide pas la disponibilité de tous les sites réels. URL sans protocole normalisée côté lien, javascript refusé. La vérification ancienne du domaine des P’tits Loups avait répondu HTTP 403 ; aucun succès d’extraction de ce site n’est revendiqué.
+
+**Données réelles distinctes des fixtures :** trois campagnes sur la copie suisse existante, dans une base temporaire et réseau désactivé, ont à nouveau conservé 12 fiches, correction, note, opposition et export ATLAS. Aucun audit web exécuté pendant cette recette hors ligne. Rapport agrégé sans coordonnées : docs/LOCAL_OSM_REAL_VALIDATION_1_5.json. Windows n’a pas été exécuté. Voir SIMPLE_WORKFLOW_V1_5.md.
+
+---
+
 # Validation 1.4 — 25 octobre 2026
 
 **161 tests backend réussis, zéro échec, zéro ignoré**, un avertissement Starlette/AnyIO conservé. Syntaxes JS/Python et cohérence des dépendances vérifiées. Migration 0005→0006 exécutée sur une ancienne base de test avec campagne, note, correction téléphone, opposition, appartenance et audit : tout conservé, sauvegarde créée, fichier source inchangé.

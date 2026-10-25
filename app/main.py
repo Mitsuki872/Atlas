@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 from fastapi import FastAPI, HTTPException, Request, Depends, Query
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from sqlalchemy import select, func, or_
 from app.db import Session, DATA, Campaign, Company, Membership, Activity, Job, Setting, Log, PlanningExport, SourceRecord, DatasetJob, now, serialize
 from app.domain import CampaignInput, STATUSES, SECTORS, CANTONS, available, atlas_export, score_company
@@ -20,7 +20,7 @@ from app.network import audit_capabilities
 from app.audits import refresh_qualification,persist_audit
 from app.scoring_api import router as scoring_router
 
-app=FastAPI(title='Prospect Engine',version='1.4.0')
+app=FastAPI(title='Prospect Engine',version='1.5.0')
 app.include_router(scoring_router)
 from app.workspace_api import router as workspace_router
 app.include_router(workspace_router)
@@ -46,7 +46,9 @@ async def local_guard(request:Request,call_next):
 def index():return FileResponse(STATIC/'index.html')
 app.mount('/static',StaticFiles(directory=STATIC),name='static')
 @app.get('/api/session')
-def session():return {'token':TOKEN,'statuses':STATUSES,'sectors':list(SECTORS),'cantons':list(CANTONS)}
+def session():
+    from app.sector_catalog import CATALOG
+    return {'token':TOKEN,'statuses':STATUSES,'sectors':list(SECTORS),'sector_catalog':CATALOG,'cantons':list(CANTONS)}
 def current_weights(db):
     setting=db.get(Setting,'scoring')
     return setting.value if setting else None
@@ -64,7 +66,8 @@ def campaigns():
             latest={}
             for job in searches:latest.setdefault(job.company_id,job)
             website_search={'total':len(latest),'pending':sum(j.state in ('queued','running') for j in latest.values()),'confirmed':sum(bool(j.result.get('applied')) for j in latest.values()),'review':sum(j.result.get('state') in ('review_required','ambiguous') for j in latest.values()),'blocked':sum(j.state=='failed' or j.result.get('state') in ('blocked','source_unavailable') for j in latest.values())}
-            output.append({**serialize(c),'website_search':website_search})
+            latest_job=db.scalar(select(Job).where(Job.campaign_id==c.id).order_by(Job.created_at.desc()))
+            output.append({**serialize(c),'website_search':website_search,'latest_job_id':latest_job.id if latest_job else None})
         return output
 @app.post('/api/campaigns',status_code=201)
 def create_campaign(data:CampaignInput):
@@ -81,6 +84,13 @@ def edit_campaign(id:str,data:CampaignInput):
 def campaign_action(id:str,action:str):
     with Session() as db:
         c=must(db,Campaign,id)
+        if action=='rerun':
+            if c.state in ('running','paused'):raise HTTPException(409,'Arrêtez ou terminez la campagne avant de la relancer.')
+            from app.db import WebsiteJob
+            for previous in db.scalars(select(Job).where(Job.campaign_id==id,Job.state.in_(['queued','running','failed']))):previous.state='cancelled'
+            for pending in db.scalars(select(WebsiteJob).where(WebsiteJob.config['campaign_id'].as_string()==id,WebsiteJob.state.in_(['queued','running','paused']))):pending.state='cancelled'
+            c.config={**c.config,'max_prospects':25,'audit_web':True,'discover_websites':True}
+            c.state='running';c.error=None;c.progress={'stage':'queued','batch_size':25,'rerun':True};db.add(Job(campaign_id=id));db.commit();return serialize(c)
         if action=='duplicate':
             duplicate=Campaign(name=c.name+' — copie',config={**c.config,'name':c.name+' — copie','discover_websites':c.config.get('discover_websites',True)});db.add(duplicate);db.commit();return serialize(duplicate)
         transitions={'start':({'draft'},'running'),'pause':({'running'},'paused'),'resume':({'paused','failed'},'running'),'stop':({'running','paused','failed'},'stopped'),'archive':({'draft','completed','failed','stopped'},'archived')}
@@ -109,7 +119,12 @@ def companies(filters:CompanyFilters=Depends(),offset:int=Query(default=0,ge=0),
         query=company_query(filters)
         count=db.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
         rows=db.scalars(query.offset(offset).limit(limit))
-        return {'total':count,'items':[serialize(c) for c in rows],'offset':offset,'limit':limit}
+        items=[serialize(c) for c in rows]
+        totals={}
+        for view in ('recommended','review','all'):
+            scoped=company_query(filters.model_copy(update={'screening':view})).order_by(None)
+            totals[view]=db.scalar(select(func.count()).select_from(scoped.subquery()))
+        return {'total':count,'items':items,'offset':offset,'limit':limit,'screening_totals':totals}
 @app.get('/api/companies/{id}')
 def company_detail(id:str):
     with Session() as db:
@@ -124,6 +139,16 @@ class CompanyPatch(BaseModel):
     canton:str|None=Field(default=None,max_length=100)
     website:str|None=Field(default=None,max_length=2000)
     status:str|None=None
+    do_not_contact:bool|None=None
+    @model_validator(mode='before')
+    @classmethod
+    def compatibility(cls,data):
+        from app.statuses import canonical_status
+        if isinstance(data,dict) and data.get('status'):
+            data=dict(data)
+            if data['status']=='Ne plus contacter':data['do_not_contact']=True
+            data['status']=canonical_status(data['status'])
+        return data
     @field_validator('email')
     @classmethod
     def valid_email(cls,v):
@@ -146,8 +171,10 @@ class CompanyPatch(BaseModel):
 def update_company(id:str,data:CompanyPatch):
     with Session() as db:
         c=must(db,Company,id)
-        if c.suppressed and data.status and data.status!='Ne plus contacter':raise HTTPException(409,'Suppression de non-contact requise par une procédure explicite ; non disponible en V0.1.')
-        changes=data.model_dump(exclude_none=True)
+        if c.suppressed and data.status and data.status!='Écarté':raise HTTPException(409,'Suppression de non-contact requise par une procédure explicite ; non disponible en V0.1.')
+        changes=data.model_dump(exclude_none=True);opposition=changes.pop('do_not_contact',None)
+        if opposition is False and c.suppressed:raise HTTPException(409,'Une opposition existante reste protégée')
+        if opposition is True:changes['status']='Écarté'
         if 'website' in changes and changes['website']!=c.website:
             c.audit={};c.score={};c.identification={};c.qualification={}
         for key,value in changes.items():
@@ -155,7 +182,7 @@ def update_company(id:str,data:CompanyPatch):
             if old!=value:
                 label={'status':'Statut','name':'Nom','city':'Ville','phone':'Téléphone','website':'Site web','email':'E-mail','canton':'Canton'}[key]
                 db.add(Activity(company_id=id,kind='change',text=f'{label} : {old or "inconnu"} → {value or "inconnu"}'))
-        if data.status=='Ne plus contacter':
+        if opposition is True:
             c.suppressed=1
             from app.db import OutreachSuppression
             db.add(OutreachSuppression(company_id=id,reason='USER_OPPOSITION',source='Modification CRM'))
@@ -231,7 +258,7 @@ def dashboard():
         rows=list(db.scalars(select(Company)));acts=list(db.scalars(select(Activity).order_by(Activity.created_at.desc())))
         counts={s:sum(c.status==s for c in rows) for s in STATUSES}
         calls=[a for a in acts if a.kind=='call'];clients=counts['Client']
-        return {'companies':len(rows),'analyzed':sum(c.audit.get('state')=='observed' for c in rows),'qualified':counts['Qualifié'],'to_call':counts['À appeler'],'planned':counts['Appel planifié'],'calls':len(calls),'no_answer':sum(a.outcome=='Sans réponse' for a in calls),'interested':counts['Intéressé'],'quotes':sum(a.kind=='quote' for a in acts),'clients':clients,'conversion':round(clients/len(rows)*100,1) if rows else 0,'quote_value':sum(a.amount for a in acts if a.kind=='quote'),'sales_value':sum(a.amount for a in acts if a.kind=='sale'),'opportunity_value':sum(a.amount for a in acts if a.kind=='opportunity'),'measured_cost_chf':0,'active_campaigns':db.scalar(select(func.count()).select_from(Campaign).where(Campaign.state=='running')),'sectors':{s:sum(c.sector==s for c in rows) for s in sorted({c.sector for c in rows})},'timeline':{d:sum(c.created_at[:10]==d for c in rows) for d in sorted({c.created_at[:10] for c in rows})},'activities':[serialize(a) for a in acts[:15]],'reminders':[serialize(a) for a in acts if a.kind=='reminder' and a.due_at and a.due_at>=now()][:15]}
+        return {'companies':len(rows),'analyzed':sum(c.audit.get('state')=='observed' for c in rows),'qualified':sum(bool(c.qualification.get('eligible_for_outreach')) for c in rows),'to_call':counts['À contacter'],'planned':sum(a.kind=='reminder' and bool(a.due_at) for a in acts),'calls':len(calls),'no_answer':sum(a.outcome=='Sans réponse' for a in calls),'interested':counts['Contacté'],'quotes':sum(a.kind=='quote' for a in acts),'clients':clients,'conversion':round(clients/len(rows)*100,1) if rows else 0,'quote_value':sum(a.amount for a in acts if a.kind=='quote'),'sales_value':sum(a.amount for a in acts if a.kind=='sale'),'opportunity_value':sum(a.amount for a in acts if a.kind=='opportunity'),'measured_cost_chf':0,'active_campaigns':db.scalar(select(func.count()).select_from(Campaign).where(Campaign.state=='running')),'sectors':{s:sum(c.sector==s for c in rows) for s in sorted({c.sector for c in rows})},'timeline':{d:sum(c.created_at[:10]==d for c in rows) for d in sorted({c.created_at[:10] for c in rows})},'activities':[serialize(a) for a in acts[:15]],'reminders':[serialize(a) for a in acts if a.kind=='reminder' and a.due_at and a.due_at>=now()][:15]}
 @app.get('/api/diagnostics')
 def diagnostics():
     with Session() as db:

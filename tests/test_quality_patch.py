@@ -60,7 +60,7 @@ def contacts_fixture():
     with Session() as db:
         campaign=Campaign(name='QA quality',config=CampaignInput(name='QA quality').model_dump());db.add(campaign);db.flush()
         for name,phone,email in [('phone','+41210000001',''),('email','','info@example.org'),('both','+41210000002','contact@example.org'),('none','','')]:
-            c=Company(identity='qa:'+name,name=name,phone=phone,email=email,city='Lausanne',canton='Vaud',sector='restaurant',status='À appeler',website='https://example.org' if name!='none' else '',verified_at='2026-10-20T12:00:00+00:00',audit={'state':'observed','status':200,'html_analyzed':True,'findings':[{'code':'title','message':'Observed missing title','points':15}]})
+            c=Company(identity='qa:'+name,name=name,phone=phone,email=email,city='Lausanne',canton='Vaud',sector='restaurant',status='À contacter',website='https://example.org' if name!='none' else '',verified_at='2026-10-20T12:00:00+00:00',audit={'state':'observed','status':200,'html_analyzed':True,'findings':[{'code':'title','message':'Observed missing title','points':15}]})
             db.add(c);db.flush();c.score=score_company(c);c.quality_score=quality_score(c);db.add(Membership(campaign_id=campaign.id,company_id=c.id))
         db.commit();return campaign.id
 
@@ -190,12 +190,12 @@ def test_worker_network_does_not_lock_out_manual_corrections(client,monkeypatch)
     record=Connector().discover({})[0]
     with Session() as db:
         c=Company(**record,identification={'website_status':'OFFICIAL_SITE_CONFIRMED','confidence':95});db.add(c);db.flush();company_id=c.id
-        campaign=Campaign(name='Concurrency',config=CampaignInput(name='Concurrency',audit_web=True).model_dump(),state='running');db.add(campaign);db.flush();job=Job(campaign_id=campaign.id);db.add(job);db.commit();job_id=job.id
-    def controlled_audit(url):
+        campaign=Campaign(name='Concurrency',config=CampaignInput(name='Concurrency',audit_web=True,checks_async=False).model_dump(),state='running');db.add(campaign);db.flush();job=Job(campaign_id=campaign.id);db.add(job);db.commit();job_id=job.id
+    def controlled_audit(url,*args,**kwargs):
         r=client.patch('/api/companies/'+company_id,json={'phone':'+41210000009','website':'https://new.example.org'})
         assert r.status_code==200 # Would fail/lock if the worker held a write transaction.
         return {'state':'observed','status':500,'findings':[{'code':'http_error','message':'Old website fixture','points':45}],'checked_at':now()}
-    monkeypatch.setattr(w,'audit_website',controlled_audit)
+    monkeypatch.setattr('app.free_checks.audit_website',controlled_audit)
     w.process_job(job_id,Connector())
     with Session() as db:
         c=db.get(Company,company_id)

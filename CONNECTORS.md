@@ -1,3 +1,7 @@
+# Sources actives — version 1.5
+
+OSM local/Overpass et sites publics autorisés, aucune intégration commerciale ou clé API. Tags/contacts, rapprochements OSM et domaines connus servent à la recherche de site. Les contrôles gratuits du site et de la présence OSM ne sont pas des mesures Google. L’adaptateur de recherche général 1.4 est retiré ; les références ci-dessous restent l’historique de versions antérieures. Voir SIMPLE_WORKFLOW_V1_5.md.
+
 # Évolution 1.4 — découverte de sites
 
 Sources locales de domaines et adaptateur Brave Search API autorisé/configurable, aucun accès réel réussi revendiqué. Contrôles publics DNS/robots/TLS/redirections, rapprochement nom+localité+coordonnée/adresse, candidats incertains conservés. Les P’tits Loups : URL de référence fournie par l’utilisateur, robots.txt HTTP 403 dans ce cloud. Cette nouvelle recherche identifie des domaines ; elle ne calcule pas les positions/avis du score B. Voir WORKSPACE_V1_4.md et docs/WEBSITE_DISCOVERY_REAL_OBSERVATIONS.json.

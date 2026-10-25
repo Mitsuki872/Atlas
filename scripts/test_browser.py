@@ -21,6 +21,8 @@ def main():
      c=Company(identity='test:browser',name='Synthetic browser bakery',city='Lausanne',sector='bakery',phone='+41000000000',facts={'source':'https://example.com/fixture','confidence':'synthetic-test','hours':parse_hours('Mo-Fr 09:00-12:00','https://example.com/fixture','2026-10-21T10:00:00+00:00')},audit={})
      db.add(c);db.flush();c.score=score_company(c);c.quality_score=quality_score(c)
      campaign=Campaign(name='QA Overpass indisponible',config=CampaignInput(name='QA source failure',data_source='osm-overpass').model_dump(),state='running');db.add(campaign);db.flush();job=Job(campaign_id=campaign.id);db.add(job);db.commit();job_id=job.id
+    with Session() as db:
+     previous=Campaign(name='Lot terminé — fixture',config=CampaignInput(name='Lot terminé',audit_web=False).model_dump(),state='completed');db.add(previous);db.flush();db.add(Job(campaign_id=previous.id,state='done',records=[]));db.commit()
     record_failure(job_id,SourceError('Overpass temporairement indisponible (HTTP 502). Données conservées.',status=502,retryable=True,retry_after=300,attempts=3))
     """ )])
     try:

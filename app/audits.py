@@ -11,7 +11,7 @@ def context_for(db,campaign,company):
     if identity.get('website') and identity.get('website')!=company.website:identity={}
     latest=company.qualification or {}
     acts=list(db.scalars(select(Activity).where(Activity.company_id==company.id)))
-    treated=company.status not in ('Nouveau','À qualifier','Qualifié','À appeler') or any(a.kind in ('call','sale','quote') for a in acts)
+    treated=company.status not in ('À contacter','Nouveau','À qualifier','Qualifié','À appeler') or any(a.kind in ('call','sale','quote') for a in acts)
     active_suppressions=list(db.scalars(select(OutreachSuppression).where(OutreachSuppression.company_id==company.id)))
     suppressions=[s for s in active_suppressions if not s.expires_at or s.expires_at>now()]
     config=campaign.config if campaign else {}
@@ -19,13 +19,17 @@ def context_for(db,campaign,company):
             'website_status':identity.get('website_status','SITE_CANDIDATE_UNCERTAIN' if company.website else 'IDENTITY_UNCERTAIN'),
             'identification_confidence':identity.get('confidence',0),'identity_evidence':identity.get('evidence',[]),'multisource_verified':identity.get('multisource_verified',False),'validated_at':identity.get('checked_at'),
             'contact_match':identity.get('contact_match'),'independent_verified':identity.get('independent_verified'),'durable_unavailable':bool(len(company.audit.get('attempt_statuses',[]))>=3 and all(code in (500,502,503,504) for code in company.audit['attempt_statuses'])),
-            'suppressed':bool(company.suppressed or suppressions),'closed':identity.get('website_status')=='BUSINESS_CLOSED','active_client':company.status=='Client','contact_unauthorized':identity.get('contact_unauthorized',False),'treated':treated,
+            'suppressed':bool(company.suppressed or suppressions or company.status=='Écarté'),'closed':identity.get('website_status')=='BUSINESS_CLOSED','active_client':company.status=='Client','contact_unauthorized':identity.get('contact_unauthorized',False),'treated':treated,
             'followup_authorized':identity.get('followup_authorized',False),'campaign_inactive':bool(campaign and campaign.state not in ('running','completed')),'min_identity':config.get('min_identity',70),
             'locality_match':(company.canton==config.get('canton') and (not config.get('city') or company.city.casefold()==config['city'].casefold())) if campaign else None,
             'sector_match':company.sector in config.get('sectors',[]) if campaign else None}
 
 def qualification_summary(result,audit_id):
-    return {k:v for k,v in result.items() if k not in ('criteria','evidence')}|{'audit_id':audit_id,'opportunity_count':len(result['opportunities'])}
+    summary={}
+    for name,letter in [('site','A'),('visibility','B'),('opportunity','C')]:
+        rows=[r for r in result['criteria'] if r['code'].startswith(letter) and r['status'] in ('PASS','PARTIAL','FAIL')]
+        summary[name]={'measured':len(rows),'passed':sum(r['status']=='PASS' for r in rows),'issues':sum(r['status'] in ('PARTIAL','FAIL') for r in rows)}
+    return {k:v for k,v in result.items() if k not in ('criteria','evidence')}|{'audit_id':audit_id,'opportunity_count':len(result['opportunities']),'observations_summary':summary}
 
 def persist_audit(db,company,observations=None,evidence=None,campaign=None,mode='QUICK',force=False,context_extra=None,target=None):
     config=target.config if target else rubric(db);context=context_for(db,campaign,company)
@@ -38,7 +42,10 @@ def persist_audit(db,company,observations=None,evidence=None,campaign=None,mode=
     fingerprint=hashlib.sha256(json.dumps({'input':inputs,'context':context,'rubric':config,'mode':mode},sort_keys=True,default=str).encode()).hexdigest()
     previous=db.scalar(select(AuditRun).where(AuditRun.company_id==company.id,AuditRun.fingerprint==fingerprint,AuditRun.status=='completed').order_by(AuditRun.started_at.desc()))
     if not force and previous and datetime.fromisoformat(previous.finished_at)>datetime.now(timezone.utc)-timedelta(hours=config['cache_ttl_hours']):
-        company.qualification=qualification_summary(previous.result,previous.id);return previous
+        company.qualification=qualification_summary(previous.result,previous.id)
+        from app.screening import screen
+        company.facts={**company.facts,'screening':screen(company)}
+        return previous
     checked=now();result=calculate(observations,evidence,context,config,checked)
     stages=[{'stage':'entity_resolution','status':'completed' if context['identification_confidence']>=config['identity_min'] else 'review_required'},
             {'stage':'website_audit','status':company.audit.get('state','not_requested')},
@@ -60,6 +67,8 @@ def persist_audit(db,company,observations=None,evidence=None,campaign=None,mode=
     db.add(ScoreSnapshot(audit_id=run.id,payload={k:result[k] for k in ('scores','identification_confidence','rubric_version','rubric_hash')},computed_at=checked))
     for op in result['opportunities']:db.add(Opportunity(audit_id=run.id,payload=op,review_status='REVIEW_REQUIRED' if op['human_review_required'] else 'OBSERVED'))
     company.qualification=qualification_summary(result,run.id)
+    from app.screening import screen
+    company.facts={**company.facts,'screening':screen(company)}
     return run
 
 def refresh_qualification(db,company,campaign=None):
@@ -67,7 +76,10 @@ def refresh_qualification(db,company,campaign=None):
     run=db.get(AuditRun,previous) if previous else None
     if run and run.context.get('website')!=company.website:run=None
     if not campaign and run and run.campaign_id:campaign=db.get(Campaign,run.campaign_id)
-    return persist_audit(db,company,run.input['observations'] if run else None,run.input['evidence'] if run else None,campaign,run.mode if run else 'QUICK')
+    result=persist_audit(db,company,run.input['observations'] if run else None,run.input['evidence'] if run else None,campaign,run.mode if run else 'QUICK')
+    from app.screening import screen
+    company.facts={**company.facts,'screening':screen(company)}
+    return result
 
 
 def process_audit_job(id,stop_event):

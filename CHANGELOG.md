@@ -1,3 +1,7 @@
+# 1.5.0 — parcours simple et gratuit
+
+Relance de 25 nouveaux candidats sans doublons de campagne, vue dernier lot ; catalogue français de plus de 50 secteurs avec suggestions séparées du filtrage ; cinq statuts colorés avec migration/historique/oppositions ; menus stylisés accessibles ; numéros/e-mails copiables et liens externes directs sans placeholder #, délais de requête. Pipeline retiré, ATLAS réduit à la sélection/export ; notes conservées. Contrôles web gratuits automatiques et présence OSM sourcée, graphiques partiels honnêtes, tri Exploitables/À vérifier/Toutes. Adaptateur, clés et commandes de recherche payante retirés. Voir SIMPLE_WORKFLOW_V1_5.md.
+
 # 1.4.0 — espace de travail bleu sombre et recherche de sites
 
 Refonte de navigation et du thème, table compacte/filtres avancés repliés, vraie page entreprise avec jauges A/B/C et preuves à la demande. CRM en pipeline, planification des relances/sélection ATLAS persistante distincte. Migration additive 0006 pour recherches de sites persistantes, rapprochement multi-champs, candidats, cache/quota, adaptateur Brave conditionnel et protection des corrections/domaines. Aucun accès moteur réel ni extraction réussie des P’tits Loups revendiqués : voir WORKSPACE_V1_4.md.

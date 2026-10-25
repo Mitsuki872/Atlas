@@ -40,7 +40,7 @@ def build_query(config):
         query+='('+''.join(f'rel["boundary"="administrative"]["admin_level"="8"]["{tag}"~{name},i](area.region);' for tag in ('name','name:fr'))+');map_to_area->.scope;'
     else:query+='(.region;)->.scope;'
     query+='.scope out count;'
-    cap=min(100,config['max_prospects'])
+    cap=100 if config.get('exclude_identities') else min(100,config['max_prospects'])
     for sector in config['sectors']:
         rules=rules_for(sector)
         if rules:
@@ -55,7 +55,7 @@ class OverpassConnector:
     id='osm-overpass'
     metadata={'id':id,'name':'OpenStreetMap / Overpass','description':'Recherche bornée par canton et catégorie, sans clé payante.','capabilities':['discovery','public_contacts','opening_hours'],'prerequisites':['Internet','Autorisation de l’instance Overpass'],'terms':'https://www.openstreetmap.org/copyright','attribution':'© OpenStreetMap contributors — ODbL','rate_limit':'1 requête par campagne, 60 s minimum entre campagnes ; au plus 100 candidats par secteur et 100 résultats finaux.','transport':'GET','working_memory_mib':64,'max_response_bytes':8_000_000,'cost_chf':0,'status':'available_unverified'}
     def discover(self,config):
-        cap=min(100,config['max_prospects'])
+        cap=100 if config.get('exclude_identities') else min(100,config['max_prospects'])
         query=build_query(config)
         for attempt in range(3):
             try:
@@ -76,7 +76,7 @@ class OverpassConnector:
                     if e.get('type') not in ('node','way','relation'):continue
                     r=self.normalize(e);r['canton']=config['canton'];r['facts']['categories']=[s for s in config['sectors'] if matches(s,e.get('tags',{}))]
                     if r['facts']['categories']:r['sector']=r['facts']['categories'][0];records[r['identity']]=r
-                pool=list(records.values())
+                pool=[r for r in records.values() if r['identity'] not in set(config.get('exclude_identities',[]))]
                 counts=Counter(s for r in pool for s in r['facts'].get('categories',[r['sector']]))
                 selected=choose_records(pool,config['sectors'],config['max_prospects'],config.get('distribution','balanced'))
                 self.discovery_stats={'query_scope':{'canton':config['canton'],'municipality':config.get('city',''),'area_confirmed':True,'transport':'GET','server_memory_mib':64},'mode':config.get('distribution','balanced'),'business_resolution':[resolution(s) for s in config['sectors']],'sectors':{s:{'returned_candidates':counts[s],'available_total':None,'candidate_pool_may_be_truncated':counts[s]>=cap,'selected':sum(r['sector']==s for r in selected)} for s in config['sectors']},'limitations':['Nombre total de candidats inconnu ; sortie bornée par secteur. Pertinence = coordonnées disponibles dans le pool, pas intention d’achat.']}

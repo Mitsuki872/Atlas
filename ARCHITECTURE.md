@@ -48,3 +48,7 @@ Migration 0005 : companies.identification/qualification et audit_runs, criterion
 
 ## 1.4
 Migration 0006 additive website_jobs. website_discovery : sources/candidats/vérification/jobs ; search_credentials : clé dans un fichier env local dédié, jamais SQLite/export ; workspace_api : vues de lecture CRM/planning et commandes de recherche. Worker unique récupère les recherches running, contrôle annulation/pause et mises à jour concurrentes. Couche frontend conserve les routes historiques, ajoute #company?id= et distingue Prospects, Pipeline CRM et Planification. Anciennes mesures de domaine non réattribuées à un nouveau site. Aucun framework ni dépendance graphique ajoutés.
+
+
+## 1.5
+Migration additive 0007 : statut canonique parmi cinq, activité retraçant l’ancien statut et opposition protégée ; préférences moteur retirées. manage.migrate retire le module et le fichier de clé obsolètes après succès. statuses/sector_catalog/screening/free_checks séparent vocabulaire, suggestions, tri commercial réversible et contrôles sourcés. CompanyFilters.screening/batch sont SQL et paginés ; rerun crée un Job et transmet les identités exclues aux connecteurs. Le graphe partiel affiche les nombres réels de contrôles positifs/évalués, sans modifier le contrat des scores A/B/C. selects.js conserve les selects natifs comme source des formulaires et les présente en listes clavier stylisées. Routes CRM anciennes redirigées, ATLAS conserve ses exports.

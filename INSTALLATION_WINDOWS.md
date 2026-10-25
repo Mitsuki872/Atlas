@@ -1,3 +1,7 @@
+# Version 1.5 — guide actuel
+
+Lire [SIMPLE_WORKFLOW_V1_5.md](SIMPLE_WORKFLOW_V1_5.md). Campagnes → Entreprises → ATLAS ; cinq statuts ; aucune clé API ni service payant. Les sections précédentes conservées ci-dessous décrivent des versions historiques.
+
 # Version 1.4
 
 [Guide de mise à jour et prise en main](WORKSPACE_V1_4.md). Sauvegarder, Stop.bat, conserver data/.venv en copiant les nouveaux fichiers, Install.bat, Start.bat puis recharger la page. Aucun nouveau téléchargement/index suisse nécessaire. La recherche web générale nécessite un moteur configuré ; les refus d’accès restent visibles.

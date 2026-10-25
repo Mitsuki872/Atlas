@@ -41,9 +41,10 @@ class LocalOSMConnector:
                 where+=' AND municipality_norm=?';params.append(city_matches[0][0])
             sectors=config['sectors']
             rows=db.execute('SELECT * FROM businesses WHERE '+where+' ORDER BY identity',params).fetchall()
-        normalized=[];normalizer=OverpassConnector();counts={s:0 for s in sectors}
+        normalized=[];normalizer=OverpassConnector();counts={s:0 for s in sectors};excluded=set(config.get('exclude_identities',[]))
         for row in rows:
             tags=json.loads(row['tags'])
+            if row['identity'] in excluded:continue
             categories=[s for s in sectors if matches(s,tags)]
             if not categories:continue
             for sector in sectors:

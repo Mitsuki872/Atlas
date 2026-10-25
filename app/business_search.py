@@ -42,7 +42,10 @@ def rules_for(term):
     if label in CHILDCARE_TERMS:return CHILDCARE_RULES
     if label in ('creche','creches','nurserie','nurseries','accueil de jour pour enfants'):return [CHILDCARE_RULES[0],CHILDCARE_RULES[2]]
     if label in ('jardin d enfants','jardins d enfants','prescolaire','ecole enfantine','ecoles enfantines'):return [CHILDCARE_RULES[1]]
-    tag=tag_for(term)
+    from app.sector_catalog import selected_id,TAGS
+    key=selected_id(term)
+    if key=='creche':return [CHILDCARE_RULES[0],CHILDCARE_RULES[2]]
+    tag=tag_for(term) or TAGS.get(key)
     return [(tag,)] if tag else []
 
 def resolution(term):

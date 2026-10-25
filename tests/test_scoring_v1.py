@@ -261,11 +261,11 @@ def test_worker_does_not_audit_uncertain_osm_candidate(monkeypatch):
         id='fixture'
         def discover(self,config):return [OverpassConnector().normalize({'type':'node','id':888,'tags':{'name':'Synthetic uncertain domain','amenity':'restaurant','website':'https://example.org'}})]
     with Session() as db:
-        c=Campaign(name='Uncertain',config=CampaignInput(name='Uncertain',audit_web=True).model_dump(),state='running');db.add(c);db.flush();j=Job(campaign_id=c.id);db.add(j);db.commit();jid=j.id
-    monkeypatch.setattr('app.worker.audit_website',lambda *a,**kw:pytest.fail('Unconfirmed domain must not be audited as official'))
+        c=Campaign(name='Uncertain',config=CampaignInput(name='Uncertain',audit_web=True,checks_async=False).model_dump(),state='running');db.add(c);db.flush();j=Job(campaign_id=c.id);db.add(j);db.commit();jid=j.id
+    monkeypatch.setattr('app.free_checks.inspect_candidate',lambda *a,**kw:{'state':'candidate','reason':'Controlled identity uncertainty'})
     process_job(jid,Connector())
     with Session() as db:
-        c=db.scalar(select(Company));assert c.audit=={} and c.qualification['scores']['site']['value'] is None
+        c=db.scalar(select(Company));assert c.audit['state']=='unavailable' and c.qualification['scores']['site']['value'] is None
 
 def test_explicit_tls_failure_dns_confirmed_and_collector_unknown(monkeypatch):
     import app.network as n
