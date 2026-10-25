@@ -1,3 +1,7 @@
+# Version 1.4 — votre espace de prospection
+
+Interface bleu sombre, filtres repliés, dossiers entreprise, pipeline CRM et planification distincts. Recherche de sites avec preuves et tâches persistantes ; le moteur général nécessite une clé et une autorisation dans Paramètres. [Installation, fonctionnement et limites](WORKSPACE_V1_4.md). Les captures dans docs/screenshots utilisent uniquement des entreprises synthétiques.
+
 # Version 1.3 — qualification PME
 
 Tri par flèches dans les colonnes, métiers libres et scores A/B/C explicables avec couverture, preuves et historique. [Installation et limites réelles](SCORING_V1_3.md). Mise à jour additive : conserver data/.venv, lancer Install.bat, puis reconstruire l’index local à la demande. Google/avis/IA/Lighthouse ne sont pas configurés : critères correspondants inconnus. Les sections 1.2 ci-dessous restent un historique.

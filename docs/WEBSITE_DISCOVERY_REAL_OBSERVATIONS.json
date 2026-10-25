@@ -1,0 +1,26 @@
+{
+  "observed_date": "2026-10-25",
+  "reference_url": "https://www.lesptitsloups.ch",
+  "reference_origin": "URL supplied by user; not discovered automatically",
+  "osm_identity": "osm:node:3387878694",
+  "osm_snapshot_at": "2026-10-20T20:23:47+00:00",
+  "osm_fields_present": [
+    "name",
+    "amenity",
+    "wheelchair"
+  ],
+  "osm_website_present": false,
+  "cloud_probe": {
+    "url": "https://www.lesptitsloups.ch/robots.txt",
+    "http_status": 403,
+    "homepage_fetched": false,
+    "contacts_extracted": false
+  },
+  "authorized_search_provider_configured_in_cloud": false,
+  "live_automatic_discovery_verified": false,
+  "limitations": [
+    "No restriction bypass. A browser visit by the user is not equivalent to authorized automated collection.",
+    "No hardcoded mapping to this company in application discovery.",
+    "Windows access and the live Brave API remain unverified."
+  ]
+}

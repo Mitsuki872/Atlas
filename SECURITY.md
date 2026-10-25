@@ -40,3 +40,7 @@ Destination de téléchargement fixe, redirections HTTPS limitées au même four
 
 ## 1.3
 Identification officielle multi-champs avant audit ; observations externes strictes avec preuves et autorisation ; critères inconnus non transformés en échecs. Aucun fournisseur IA ou payant configuré. Prompt optionnel traite les pages comme données non fiables ; aucun contenu de site n’est exécuté par le calculateur. Historique immuable/versionné, oppositions cumulatives. Les références urn:prospectengine désignent le CRM/la grille locale, pas des URL externes prétendument consultées. Pas de capture navigateur non isolée.
+
+
+## 1.4
+Recherche web opt-in avec clé/autorisation et quota sans coût confirmé, réservation SQL quotidienne avant appel. Clé BRAVE_SEARCH_API_KEY ou fichier local data/search-provider.env non inclus dans SQLite/exports/ZIP ; format validé, permissions POSIX 0600, aucune valeur retournée par les API. Sous Windows, protéger le dossier local. Pas de scraping de SERP HTML. Résultats moteur non fiables : URL validée, DNS public épinglé/robots sur chaque redirection (max. 3), pas de CAPTCHA/refus contourné. Coordonnées personnelles non aspirées en masse, preuves minimisées. Candidats incertains non associés comme sites officiels ; corrections/oppositions conservées ; nouveaux domaines n’héritent pas des notes de l’ancien. Les sélections ATLAS sont des identifiants en stockage navigateur local.

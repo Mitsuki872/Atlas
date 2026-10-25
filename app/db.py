@@ -156,3 +156,14 @@ class OutreachSuppression(Base):
     source: Mapped[str] = mapped_column(String)
     created_at: Mapped[str] = mapped_column(String,default=now)
     expires_at: Mapped[str | None] = mapped_column(String)
+
+class WebsiteJob(Base):
+    __tablename__='website_jobs'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    company_id: Mapped[str] = mapped_column(ForeignKey('companies.id'),index=True)
+    state: Mapped[str] = mapped_column(String(30),default='queued',index=True)
+    config: Mapped[dict] = mapped_column(JSON,default=dict)
+    result: Mapped[dict] = mapped_column(JSON,default=dict)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[str] = mapped_column(String,default=now)
+    updated_at: Mapped[str] = mapped_column(String,default=now)

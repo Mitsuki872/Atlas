@@ -30,6 +30,7 @@ class CampaignInput(BaseModel):
     min_c: float = Field(default=0,ge=0,le=100)
     min_identity: float = Field(default=70,ge=0,le=100)
     sources_authorized: list[str] = Field(default_factory=lambda:['osm-local'],max_length=20)
+    discover_websites: bool = True
     audit_web: bool = False
     distribution: str = 'balanced'
     enrich_contacts: bool = False

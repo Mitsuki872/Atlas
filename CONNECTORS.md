@@ -1,3 +1,7 @@
+# Évolution 1.4 — découverte de sites
+
+Sources locales de domaines et adaptateur Brave Search API autorisé/configurable, aucun accès réel réussi revendiqué. Contrôles publics DNS/robots/TLS/redirections, rapprochement nom+localité+coordonnée/adresse, candidats incertains conservés. Les P’tits Loups : URL de référence fournie par l’utilisateur, robots.txt HTTP 403 dans ce cloud. Cette nouvelle recherche identifie des domaines ; elle ne calcule pas les positions/avis du score B. Voir WORKSPACE_V1_4.md et docs/WEBSITE_DISCOVERY_REAL_OBSERVATIONS.json.
+
 # Évolution 1.3
 
 Recherche locale par métiers libres, alias explicites et catégories OSM générales (index v4). Les huit catégories de la version antérieure restent reconnues. Sources de visibilité/IA : adaptateur d’observations autorisées sans fournisseur réseau configuré ; critères inconnus par défaut. Les essais réels supplémentaires sont agrégés dans docs/BUSINESS_SEARCH_REAL_VALIDATION.json. Voir SCORING_V1_3.md.

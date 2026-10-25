@@ -44,3 +44,7 @@ Migration additive 0003 : email, canton, contacts JSON structurés et quality_sc
 
 ## 1.3
 Migration 0005 : companies.identification/qualification et audit_runs, criterion_results, audit_evidence, score_snapshots, audit_opportunities, outreach_suppressions. Modules scoring (grille versionnée/calcul), audits (historique/cache/jobs), scoring_api (identification/observations/réglages/archive/événements), quick_audit (preuves HTTP/DOM), audit_adapters (frontière autorisée/budget/prompt optionnel). Aucun changement de stack. Voir docs/SCORING_INTEGRATION.md et SCORING_V1_3.md.
+
+
+## 1.4
+Migration 0006 additive website_jobs. website_discovery : sources/candidats/vérification/jobs ; search_credentials : clé dans un fichier env local dédié, jamais SQLite/export ; workspace_api : vues de lecture CRM/planning et commandes de recherche. Worker unique récupère les recherches running, contrôle annulation/pause et mises à jour concurrentes. Couche frontend conserve les routes historiques, ajoute #company?id= et distingue Prospects, Pipeline CRM et Planification. Anciennes mesures de domaine non réattribuées à un nouveau site. Aucun framework ni dépendance graphique ajoutés.

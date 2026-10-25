@@ -3,7 +3,7 @@ import socket
 import threading
 import time
 from sqlalchemy import select
-from app.db import Session, Campaign, Company, Job, Membership, Setting, Log, SourceRecord, DatasetJob, AuditRun, now
+from app.db import Session, Campaign, Company, Job, Membership, Setting, Log, SourceRecord, DatasetJob, AuditRun, WebsiteJob, now
 from app.connectors import OverpassConnector
 from app.source_errors import SourceError
 from app.domain import score_company, normalize_name
@@ -87,7 +87,9 @@ def process_job(job_id,connector=None):
                     incoming=record.get('facts',{}).get('checked_at','')
                     prefer_incoming=is_new or not incoming or incoming>=company.verified_at
                     for key in ('name','city','canton','sector','phone','email','website','facts'):
-                        if prefer_incoming and key not in company.manual_fields and key in record:setattr(company,key,record[key])
+                        if prefer_incoming and key not in company.manual_fields and key in record:
+                            if key in ('phone','email','website') and not record[key] and getattr(company,key):continue
+                            setattr(company,key,record[key])
                     if company.website!=website and audit is not None:audit=None
                     if company.identification.get('website') and company.identification['website']!=company.website:company.identification={};company.audit={}
                     saved={(c['kind'],c['value'],c.get('source')):c for c in company.contacts}
@@ -106,6 +108,10 @@ def process_job(job_id,connector=None):
                     company.verified_at=incoming if is_new and incoming else max(company.verified_at,incoming)
                     from app.audits import persist_audit
                     persist_audit(db,company,campaign=campaign,mode=config.get('audit_mode','QUICK'))
+                    if config.get('discover_websites',False) and not company.website:
+                        from app.website_discovery import queue
+                        website_job=queue(db,company)
+                        if website_job.state=='queued' and not website_job.config.get('campaign_id'):website_job.config={**website_job.config,'campaign_id':campaign.id}
                     if not db.get(Membership,(campaign.id,company.id)):db.add(Membership(campaign_id=campaign.id,company_id=company.id))
                     q=company.qualification;scores=q.get('scores',{})
                     qualifies=q.get('eligible_for_outreach',False) and scores.get('opportunity',{}).get('value') is not None and scores['opportunity']['value']>=config.get('min_c',0)
@@ -142,6 +148,7 @@ def run():
         for job in db.scalars(select(Job).where(Job.state=='running')):job.state='queued'
         for job in db.scalars(select(DatasetJob).where(DatasetJob.state=='running')):job.state='queued'
         for audit in db.scalars(select(AuditRun).where(AuditRun.status=='running')):audit.status='queued'
+        for website in db.scalars(select(WebsiteJob).where(WebsiteJob.state=='running')):website.state='queued'
         db.commit()
     while not stop_event.is_set():
         with Session() as db:
@@ -150,6 +157,8 @@ def run():
             job_id=job.id if job else None
             audit=db.scalar(select(AuditRun).where(AuditRun.status=='queued').order_by(AuditRun.started_at))
             audit_id=audit.id if audit else None
+            website_job=db.scalar(select(WebsiteJob).where(WebsiteJob.state=='queued').order_by(WebsiteJob.created_at))
+            website_id=website_job.id if website_job else None
             dataset_job=db.scalar(select(DatasetJob).where(DatasetJob.state=='queued').order_by(DatasetJob.created_at))
             dataset_id=dataset_job.id if dataset_job else None
         if dataset_id:
@@ -163,6 +172,15 @@ def run():
                 with Session() as db:
                     failed=db.get(AuditRun,audit_id)
                     if failed.status!='cancelled':failed.status='failed';failed.error_summary=str(exc);failed.finished_at=now()
+                    db.commit()
+        elif website_id:
+            from app.website_discovery import process_website_job
+            try:process_website_job(website_id,stop_event)
+            except Exception as exc:
+                logging.exception('Website search failed')
+                with Session() as db:
+                    failed=db.get(WebsiteJob,website_id)
+                    if failed.state!='cancelled':failed.state='failed';failed.error=str(exc);failed.updated_at=now()
                     db.commit()
         elif job_id:
             try:process_job(job_id)

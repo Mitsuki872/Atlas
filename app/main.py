@@ -20,8 +20,10 @@ from app.network import audit_capabilities
 from app.audits import refresh_qualification,persist_audit
 from app.scoring_api import router as scoring_router
 
-app=FastAPI(title='Prospect Engine',version='1.3.1')
+app=FastAPI(title='Prospect Engine',version='1.4.0')
 app.include_router(scoring_router)
+from app.workspace_api import router as workspace_router
+app.include_router(workspace_router)
 STATIC=Path(__file__).parent/'static'
 TOKEN=secrets.token_urlsafe(32)
 @app.middleware('http')
@@ -54,7 +56,16 @@ def must(db,model,id):
     return obj
 @app.get('/api/campaigns')
 def campaigns():
-    with Session() as db:return [serialize(c) for c in db.scalars(select(Campaign).order_by(Campaign.created_at.desc()))]
+    from app.db import WebsiteJob
+    with Session() as db:
+        output=[]
+        for c in db.scalars(select(Campaign).order_by(Campaign.created_at.desc())):
+            searches=list(db.scalars(select(WebsiteJob).join(Membership,Membership.company_id==WebsiteJob.company_id).where(Membership.campaign_id==c.id).order_by(WebsiteJob.updated_at.desc(),WebsiteJob.id.desc())))
+            latest={}
+            for job in searches:latest.setdefault(job.company_id,job)
+            website_search={'total':len(latest),'pending':sum(j.state in ('queued','running') for j in latest.values()),'confirmed':sum(bool(j.result.get('applied')) for j in latest.values()),'review':sum(j.result.get('state') in ('review_required','ambiguous') for j in latest.values()),'blocked':sum(j.state=='failed' or j.result.get('state') in ('blocked','source_unavailable') for j in latest.values())}
+            output.append({**serialize(c),'website_search':website_search})
+        return output
 @app.post('/api/campaigns',status_code=201)
 def create_campaign(data:CampaignInput):
     with Session() as db:
@@ -71,7 +82,7 @@ def campaign_action(id:str,action:str):
     with Session() as db:
         c=must(db,Campaign,id)
         if action=='duplicate':
-            duplicate=Campaign(name=c.name+' — copie',config={**c.config,'name':c.name+' — copie'});db.add(duplicate);db.commit();return serialize(duplicate)
+            duplicate=Campaign(name=c.name+' — copie',config={**c.config,'name':c.name+' — copie','discover_websites':c.config.get('discover_websites',True)});db.add(duplicate);db.commit();return serialize(duplicate)
         transitions={'start':({'draft'},'running'),'pause':({'running'},'paused'),'resume':({'paused','failed'},'running'),'stop':({'running','paused','failed'},'stopped'),'archive':({'draft','completed','failed','stopped'},'archived')}
         if action not in transitions:raise HTTPException(400,'Action inconnue')
         allowed,target=transitions[action]
@@ -84,6 +95,11 @@ def campaign_action(id:str,action:str):
             c.error=None
             job=db.scalar(select(Job).where(Job.campaign_id==id).order_by(Job.created_at.desc()))
             if job:job.state='queued'
+        from app.db import WebsiteJob
+        for search in db.scalars(select(WebsiteJob).where(WebsiteJob.config['campaign_id'].as_string()==id)):
+            if action=='pause' and search.state in ('queued','running'):search.state='paused';search.updated_at=now()
+            elif action in ('stop','archive') and search.state in ('queued','running','paused'):search.state='cancelled';search.updated_at=now()
+            elif action=='resume' and search.state=='paused':search.state='queued';search.updated_at=now()
         for member in db.scalars(select(Membership).where(Membership.campaign_id==id)):
             refresh_qualification(db,must(db,Company,member.company_id),c)
         db.commit();return serialize(c)
@@ -221,7 +237,7 @@ def diagnostics():
     with Session() as db:
         db.execute(select(1));heartbeat=db.get(Setting,'worker_heartbeat')
         alive=bool(heartbeat and datetime.fromisoformat(heartbeat.value['at'])>datetime.now(timezone.utc)-timedelta(seconds=90))
-        return {'backend':'ok','database':'ok','worker':'ok' if alive else 'absent ou occupé depuis plus de 90 s','data_directory':str(DATA),'local_dataset':__import__('app.datasets',fromlist=['dataset_status']).dataset_status(),'connectors':[__import__('app.osm_local',fromlist=['LocalOSMConnector']).LocalOSMConnector.metadata,OverpassConnector.metadata,{'id':'zefix','status':'not_implemented','reason':'Conditions et accès non validés ; aucune extraction effectuée.'}],'last_overpass_probe':db.get(Setting,'last_overpass_probe').value if db.get(Setting,'last_overpass_probe') else None,'audit_capabilities':audit_capabilities(),'errors':[serialize(e) for e in db.scalars(select(Log).order_by(Log.created_at.desc()).limit(20))]}
+        return {'backend':'ok','database':'ok','worker':'ok' if alive else 'absent ou occupé depuis plus de 90 s','data_directory':str(DATA),'website_search':__import__('app.website_discovery',fromlist=['provider_status']).provider_status(db),'local_dataset':__import__('app.datasets',fromlist=['dataset_status']).dataset_status(),'connectors':[__import__('app.osm_local',fromlist=['LocalOSMConnector']).LocalOSMConnector.metadata,OverpassConnector.metadata,{'id':'zefix','status':'not_implemented','reason':'Conditions et accès non validés ; aucune extraction effectuée.'}],'last_overpass_probe':db.get(Setting,'last_overpass_probe').value if db.get(Setting,'last_overpass_probe') else None,'audit_capabilities':audit_capabilities(),'errors':[serialize(e) for e in db.scalars(select(Log).order_by(Log.created_at.desc()).limit(20))]}
 class Weights(BaseModel):
     model_config=ConfigDict(extra='forbid')
     need:int=Field(ge=0,le=100)

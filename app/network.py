@@ -46,6 +46,7 @@ def fetch_public(url, redirects=4):
             response=conn.getresponse(); status=response.status
             headers={k.lower():v for k,v in response.getheaders()}
             if status in (301,302,303,307,308):
+                if _LIMITS.get().get('return_redirect_response'):return status,headers,'',url
                 if hop==redirects: raise ValueError('Trop de redirections')
                 url=urljoin(url,headers.get('location',''));continue
             if headers.get('content-encoding','identity')!='identity': raise ValueError('Encodage compressé non accepté')
@@ -186,4 +187,20 @@ def _audit_website(url):
 def audit_website(url,limits=None):
     token=_LIMITS.set(limits or {})
     try:return _audit_website(url)
+    finally:_LIMITS.reset(token)
+
+
+def fetch_discovery_page(url,max_redirects=3):
+    """Every redirect is separately checked for public DNS, robots and rate limits."""
+    token=_LIMITS.set({**_LIMITS.get(),'return_redirect_response':True,'retries':2,'timeout_seconds':8})
+    seen=set()
+    try:
+        for hop in range(max_redirects+1):
+            if url in seen:raise ValueError('Boucle de redirection')
+            seen.add(url)
+            code,headers,body,final=fetch_allowed(url)
+            if code not in (301,302,303,307,308):return code,headers,body,final
+            if hop==max_redirects or not headers.get('location'):raise ValueError('Redirection non résolue dans la limite autorisée')
+            url=urljoin(final,headers['location'])
+        raise ValueError('Limite de redirections')
     finally:_LIMITS.reset(token)

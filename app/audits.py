@@ -65,6 +65,7 @@ def persist_audit(db,company,observations=None,evidence=None,campaign=None,mode=
 def refresh_qualification(db,company,campaign=None):
     previous=company.qualification.get('audit_id') if company.qualification else None
     run=db.get(AuditRun,previous) if previous else None
+    if run and run.context.get('website')!=company.website:run=None
     if not campaign and run and run.campaign_id:campaign=db.get(Campaign,run.campaign_id)
     return persist_audit(db,company,run.input['observations'] if run else None,run.input['evidence'] if run else None,campaign,run.mode if run else 'QUICK')
 

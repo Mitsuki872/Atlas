@@ -1,3 +1,7 @@
+# Version 1.4
+
+[Guide de mise à jour et prise en main](WORKSPACE_V1_4.md). Sauvegarder, Stop.bat, conserver data/.venv en copiant les nouveaux fichiers, Install.bat, Start.bat puis recharger la page. Aucun nouveau téléchargement/index suisse nécessaire. La recherche web générale nécessite un moteur configuré ; les refus d’accès restent visibles.
+
 # Mise à jour 1.3
 
 Voir [SCORING_V1_3.md](SCORING_V1_3.md) : sauvegarder, Stop.bat, copier les fichiers en conservant data/.venv, Install.bat, Start.bat puis Préparer la copie suisse pour reconstruire l’index v4 depuis le PBF vérifié existant. Tri par flèches dans les en-têtes ; métiers séparés par des virgules. Les mesures non disponibles restent inconnues. Windows non exécuté dans ce cloud.

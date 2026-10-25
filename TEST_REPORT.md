@@ -1,3 +1,21 @@
+# Validation 1.4 — 25 octobre 2026
+
+**161 tests backend réussis, zéro échec, zéro ignoré**, un avertissement Starlette/AnyIO conservé. Syntaxes JS/Python et cohérence des dépendances vérifiées. Migration 0005→0006 exécutée sur une ancienne base de test avec campagne, note, correction téléphone, opposition, appartenance et audit : tout conservé, sauvegarde créée, fichier source inchangé.
+
+**Navigateur réel Chromium, bases temporaires synthétiques :** thème bleu sombre, table de dix colonnes, filtres avancés repliés et sept modes de contacts SQL, tri/pagination/URL/retour ; dossier pleine page, jauges inconnues explicites, preuves repliables, identification, corrections, notes et relances. Pipeline CRM distinct (cinq colonnes), changement de statut vérifié en base ; planning distinct (aucune table prospects), sélection après rechargement, relance, export ATLAS et vrai presse-papiers. Sauvegarde, réglage versionné et diagnostic Overpass différé conservés. Pages dashboard/prospects/CRM/planning/dossier vérifiées à 390 px sans débordement de page ; bureau 1440 px ; aucune erreur JS. Les captures utilisent des entreprises explicitement synthétiques.
+
+**Recherche de sites, tests contrôlés :** nom/localité/numéro concordants, nom seul insuffisant, mauvaise ville/homonyme rejetés, multi-domaines ambigus, 403/robots/timeout distincts de qualité, exclusion des profils sociaux, domaine d’e-mail professionnel comme candidat seulement. Contrat HTTP de Brave exercé avec MockTransport (pas de vrai moteur), clé absente = aucun appel, quota persistant réservé avant appel, secret jamais renvoyé/exporté/stocké en base. Jobs idempotents/cache, annulation entre candidats, opposition, pause/reprise/arrêt campagne, correction manuelle préservée, audit courant conservé si domaine identique, changement de domaine ne réutilisant jamais les anciennes notes.
+
+Démarrage réel sur la base locale après migration 0006 : diagnostics, pipeline CRM, configuration de recherche et copie suisse ont répondu HTTP 200 ; index suisse prêt, sans reconstruction. Les tests de ports/navigateur ont été relancés avec autorisation d’ouverture des ports locaux après un changement de restrictions du sandbox.
+
+Les téléchargements de préparation et l’interface d’un site refusé utilisent des réponses UI contrôlées, clairement identifiées. Aucun succès de moteur ou collecte réelle du site cible n’est simulé.
+
+**Observation externe réelle :** l’utilisateur a fourni https://www.lesptitsloups.ch ; son robots.txt a répondu HTTP 403 depuis ce cloud. La page d’accueil n’a pas ensuite été collectée et aucune coordonnée extraite. Aucun abonnement/clé Brave réel utilisé. Rapport factuel : docs/WEBSITE_DISCOVERY_REAL_OBSERVATIONS.json. Windows et accès réels depuis le PC utilisateur restent non validés.
+
+Les validations réelles OSM historiques ci-dessous restent distinctes des fixtures de ce patch. Voir WORKSPACE_V1_4.md.
+
+---
+
 # Validation 1.3.1
 
 144 tests backend réussis, aucun échec ni test ignoré (un avertissement Starlette/AnyIO). Sept nouveaux cas couvrent le libellé exact, accents/apostrophes, catégories multiples et exclusion des écoles/seniors/hébergement résidentiel. Recherche réelle hors ligne à Morges : 6 fiches pour le libellé utilisateur, dont 2 childcare et 4 kindergarten ; crèche seule : 2. Détails agrégés dans docs/CHILDCARE_MORGES_REAL_VALIDATION.json. Ni le total national ni les résultats de cet extrait ne sont présentés comme un recensement officiel.

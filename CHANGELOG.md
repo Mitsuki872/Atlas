@@ -1,3 +1,7 @@
+# 1.4.0 — espace de travail bleu sombre et recherche de sites
+
+Refonte de navigation et du thème, table compacte/filtres avancés repliés, vraie page entreprise avec jauges A/B/C et preuves à la demande. CRM en pipeline, planification des relances/sélection ATLAS persistante distincte. Migration additive 0006 pour recherches de sites persistantes, rapprochement multi-champs, candidats, cache/quota, adaptateur Brave conditionnel et protection des corrections/domaines. Aucun accès moteur réel ni extraction réussie des P’tits Loups revendiqués : voir WORKSPACE_V1_4.md.
+
 # 1.3.1 — correction accueil d’enfants
 
 Correspondances explicites pour le libellé utilisateur, distinction crèche/préscolaire, aperçu de reconnaissance, explication des résultats vides et total national clarifié. Aucun changement d’index/base. Voir PATCH_V1_3_1.md.

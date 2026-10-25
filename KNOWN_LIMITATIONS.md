@@ -1,3 +1,9 @@
+# Limites 1.4
+
+La refonte est testée sur navigateur Linux (1440/390 px), pas sur Windows. La recherche générale de sites utilise Brave Search API uniquement avec clé et autorisations/quota configurés. Aucun compte gratuit n’est promis. Sans cela : sources locales, candidats et état indisponible explicite. Aucun accès Brave réel validé dans cette session. Le robots.txt du site des P’tits Loups fourni par l’utilisateur a répondu HTTP 403 : pas d’extraction de ses coordonnées revendiquée. Pas de contournement. Le nom seul ne permet pas de confirmer un domaine ; certaines fiches pauvres nécessitent une vérification humaine.
+
+CRM : 30 dossiers affichés par colonne, utiliser recherche/campagne ; pas de glisser-déposer, menus de statut persistants. Planning : 200 échéances affichées, état effectué non déduit d’une date passée ; ATLAS/Calendar/Notion ne sont pas connectés. La clé locale du moteur n’est pas dans les sauvegardes SQLite. Les limites du scoring avancé ci-dessous restent applicables : la recherche de domaines ne constitue pas un audit de visibilité B. Voir WORKSPACE_V1_4.md.
+
 # Limites ajoutées en 1.3
 
 La qualification A/B/C est implémentée, mais ses collecteurs sont partiels : B/IA/Lighthouse/axe/captures réseau non configurés restent UNKNOWN. DEEP ne les simule pas. Import de mesures autorisées possible ; aucun fournisseur payant branché. Pas de calibration humaine/benchmark IA ni validation juridique réalisés. Le budget est contrôlé à la frontière d’adaptateur ; une future intégration payante exige un registre atomique des dépenses.
