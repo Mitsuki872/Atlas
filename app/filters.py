@@ -41,7 +41,7 @@ class CompanyFilters(BaseModel):
         return canonical_status(v)
 
 def company_query(f:CompanyFilters):
-    query=select(Company)
+    query=select(Company).where(Company.deleted_at.is_(None))
     state=func.coalesce(Company.facts['screening']['state'].as_string(),__import__('sqlalchemy').case(((Company.phone!='')|(Company.email!='')|(Company.website!=''),'recommended'),else_='insufficient'))
     if f.screening=='recommended':query=query.where(state=='recommended',Company.suppressed==0,Company.status!='Écarté')
     if f.screening=='review':query=query.where(or_(state.in_(['insufficient','no_need','excluded']),Company.status=='Écarté',Company.suppressed==1))

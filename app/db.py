@@ -28,6 +28,7 @@ class Campaign(Base):
 class Company(Base):
     __tablename__ = 'companies'
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    deleted_at: Mapped[str | None] = mapped_column(String,nullable=True,index=True)
     identity: Mapped[str] = mapped_column(String, unique=True)
     name: Mapped[str] = mapped_column(String(300), index=True)
     city: Mapped[str] = mapped_column(String(200), default='', index=True)

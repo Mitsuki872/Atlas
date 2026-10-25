@@ -1,3 +1,5 @@
+Mise à jour **1.5.1** : synchronisation des mesures et suppression groupée — voir [PATCH_V1_5_1.md](PATCH_V1_5_1.md).
+
 # Prospect Engine 1.5
 
 Application locale de prospection suisse, sans service payant ni clé API.

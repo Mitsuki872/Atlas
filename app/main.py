@@ -20,7 +20,7 @@ from app.network import audit_capabilities
 from app.audits import refresh_qualification,persist_audit
 from app.scoring_api import router as scoring_router
 
-app=FastAPI(title='Prospect Engine',version='1.5.0')
+app=FastAPI(title='Prospect Engine',version='1.5.1')
 app.include_router(scoring_router)
 from app.workspace_api import router as workspace_router
 app.include_router(workspace_router)
@@ -221,7 +221,7 @@ class Selection(BaseModel):
 def planning(data:Selection):
     with Session() as db:
         rows=[must(db,Company,id) for id in dict.fromkeys(data.ids)]
-        if any(c.suppressed for c in rows):raise HTTPException(409,'La sélection contient une entreprise à ne plus contacter')
+        if any(c.suppressed or c.deleted_at for c in rows):raise HTTPException(409,'La sélection contient une entreprise à ne plus contacter')
         notes={c.id:[a.text for a in db.scalars(select(Activity).where(Activity.company_id==c.id,Activity.kind=='note'))] for c in rows}
         payload,prompt=atlas_export(rows,notes)
         export=PlanningExport(payload=payload);db.add(export);db.commit()
@@ -255,7 +255,7 @@ def export_companies(format:str='json',ids:str='',filters:CompanyFilters=Depends
 @app.get('/api/dashboard')
 def dashboard():
     with Session() as db:
-        rows=list(db.scalars(select(Company)));acts=list(db.scalars(select(Activity).order_by(Activity.created_at.desc())))
+        rows=list(db.scalars(select(Company).where(Company.deleted_at.is_(None))));acts=list(db.scalars(select(Activity).join(Company,Activity.company_id==Company.id).where(Company.deleted_at.is_(None)).order_by(Activity.created_at.desc())))
         counts={s:sum(c.status==s for c in rows) for s in STATUSES}
         calls=[a for a in acts if a.kind=='call'];clients=counts['Client']
         return {'companies':len(rows),'analyzed':sum(c.audit.get('state')=='observed' for c in rows),'qualified':sum(bool(c.qualification.get('eligible_for_outreach')) for c in rows),'to_call':counts['À contacter'],'planned':sum(a.kind=='reminder' and bool(a.due_at) for a in acts),'calls':len(calls),'no_answer':sum(a.outcome=='Sans réponse' for a in calls),'interested':counts['Contacté'],'quotes':sum(a.kind=='quote' for a in acts),'clients':clients,'conversion':round(clients/len(rows)*100,1) if rows else 0,'quote_value':sum(a.amount for a in acts if a.kind=='quote'),'sales_value':sum(a.amount for a in acts if a.kind=='sale'),'opportunity_value':sum(a.amount for a in acts if a.kind=='opportunity'),'measured_cost_chf':0,'active_campaigns':db.scalar(select(func.count()).select_from(Campaign).where(Campaign.state=='running')),'sectors':{s:sum(c.sector==s for c in rows) for s in sorted({c.sector for c in rows})},'timeline':{d:sum(c.created_at[:10]==d for c in rows) for d in sorted({c.created_at[:10] for c in rows})},'activities':[serialize(a) for a in acts[:15]],'reminders':[serialize(a) for a in acts if a.kind=='reminder' and a.due_at and a.due_at>=now()][:15]}

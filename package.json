@@ -1,6 +1,6 @@
 {
   "name": "prospect-engine-dev-checks",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "private": true,
   "description": "Optional browser QA tools; Node is not needed to run the application.",
   "devDependencies": {

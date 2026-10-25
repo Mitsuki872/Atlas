@@ -14,8 +14,8 @@ class Selected(BaseModel):
 @router.post('/api/planning/workspace')
 def planning_workspace(data:Selected):
     with Session() as db:
-        selected=list(db.scalars(select(Company).where(Company.id.in_(data.ids)))) if data.ids else []
-        reminders=list(db.execute(select(Activity,Company).join(Company,Activity.company_id==Company.id).where(Activity.kind=='reminder',Activity.due_at.is_not(None)).order_by(Activity.due_at).limit(200)))
+        selected=list(db.scalars(select(Company).where(Company.id.in_(data.ids),Company.deleted_at.is_(None)))) if data.ids else []
+        reminders=list(db.execute(select(Activity,Company).join(Company,Activity.company_id==Company.id).where(Activity.kind=='reminder',Activity.due_at.is_not(None),Company.deleted_at.is_(None)).order_by(Activity.due_at).limit(200)))
         return {'selected':[serialize(c) for c in selected],'missing_ids':list(set(data.ids)-{c.id for c in selected}),'reminders':[{'activity':serialize(a),'company':{'id':c.id,'name':c.name,'phone':c.phone,'suppressed':bool(c.suppressed)}} for a,c in reminders],'reminder_limit':200}
 class DiscoveryRequest(BaseModel):
     model_config=ConfigDict(extra='forbid')
@@ -30,7 +30,7 @@ def find_website(id:str,data:DiscoveryRequest):
         db.connection().exec_driver_sql('BEGIN IMMEDIATE')
         c=db.get(Company,id)
         if not c:raise HTTPException(404,'Entreprise introuvable')
-        if c.suppressed:raise HTTPException(409,'Entreprise exclue')
+        if c.suppressed or c.deleted_at:raise HTTPException(409,'Entreprise exclue ou supprimée')
         job=queue(db,c,data.force,data.candidate);db.commit();return serialize(job)
 @router.get('/api/companies/{id}/website-search')
 def website_search_status(id:str):
@@ -52,3 +52,32 @@ def website_search_provider():
 def suggest_business(q:str=''):
     from app.sector_catalog import suggest
     return suggest(q[:100])
+
+@router.get('/api/analysis/current')
+def current_analysis():
+    from app.db import AuditRun
+    with Session() as db:
+        # Report only actual running work, never pretend a queued item is running.
+        for model,field,order in ((WebsiteJob,WebsiteJob.state,WebsiteJob.created_at),(AuditRun,AuditRun.status,AuditRun.started_at)):
+            row=db.execute(select(model,Company).join(Company,model.company_id==Company.id).where(field=='running',Company.deleted_at.is_(None)).order_by(order).limit(1)).first()
+            if row:
+                job,company=row
+                return {'active':True,'company_id':company.id,'name':company.name,'website':company.website}
+        return {'active':False}
+
+@router.post('/api/companies/bulk-delete')
+def bulk_delete(data:Selected):
+    from app.db import AuditRun
+    from app.manage import backup_database
+    ids=list(set(data.ids))
+    if not ids:raise HTTPException(422,'Sélectionnez au moins une entreprise.')
+    backup=backup_database()
+    with Session() as db:
+        db.connection().exec_driver_sql('BEGIN IMMEDIATE')
+        rows=list(db.scalars(select(Company).where(Company.id.in_(ids),Company.deleted_at.is_(None))))
+        for company in rows:
+            company.deleted_at=now()
+            for job in db.scalars(select(WebsiteJob).where(WebsiteJob.company_id==company.id,WebsiteJob.state.in_(['queued','running','paused']))):job.state='cancelled';job.updated_at=now()
+            for audit in db.scalars(select(AuditRun).where(AuditRun.company_id==company.id,AuditRun.status.in_(['queued','running']))):audit.status='cancelled'
+        db.commit()
+        return {'deleted':len(rows),'ids':[c.id for c in rows],'backup':backup.name}

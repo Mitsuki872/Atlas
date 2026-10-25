@@ -1,3 +1,11 @@
+# Validation 1.5.1
+
+**171 tests backend réussis**, zéro échec ou test ignoré, un avertissement de dépréciation Starlette/AnyIO. Vérifications de syntaxe JS et compilation Python réussies.
+
+Nouveaux cas : indicateur global absent pour une tâche en attente et présent pour une recherche réellement en cours ; suppression groupée idempotente avec sauvegarde SQLite existante, conservation des coordonnées, notes et opposition, exclusion de la liste/tableau de bord/ATLAS, annulation du travail ; échec volontaire de sauvegarde empêchant toute suppression. Les migrations historiques jusqu’à la nouvelle tête 0008 conservent les anciennes données et créent leurs sauvegardes. Les fixtures anciennes sont insérées avec les colonnes disponibles à leur époque.
+
+Chromium réel, base isolée et fiches synthétiques : Site 2/3 et Présence 2/2 affichés dans la liste ; import d’une nouvelle observation pendant que la liste reste ouverte, Site devient 3/3 sans navigation ni rechargement, le brouillon de filtre reste intact. Indicateur global et ses trois points vérifiés avec une réponse réseau contrôlée (ne constitue pas une analyse d’un vrai site). Sélection de page, sélection de tous les résultats filtrés, barre en bas, annulation et confirmation de suppression, mise en page mobile. Les autres parcours de la 1.5 restent exercés. Aucun site réel ou Windows n’a été utilisé pour ces contrôles d’interface.
+
 # Validation 1.5 — 25 octobre 2026
 
 **168 tests backend réussis, aucun échec ni test ignoré**, un avertissement Starlette/AnyIO. Tests isolés, restauration services arrêtés. Migration 0006→0007 réellement exécutée sur anciennes données : cinq statuts, trace des anciens états, téléphone/corrections conservés, opposition persistante et sauvegarde créée ; fichier de clé obsolète retiré.

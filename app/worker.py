@@ -63,7 +63,7 @@ def process_job(job_id,connector=None):
             excluded=any(normalize_name(x) in normalize_name(record['name']) for x in config['exclusions'] if x.strip())
             if config.get('city') and not campaign.progress.get('distribution',{}).get('query_scope',{}).get('area_confirmed') and normalize_name(config['city'])!=normalize_name(record['city']):excluded=True
             existing=db.scalar(select(Company).where(Company.identity==record['identity']))
-            suppressed=bool(existing and existing.suppressed)
+            suppressed=bool(existing and (existing.suppressed or existing.deleted_at))
             website=existing.website if existing and ('website' in existing.manual_fields or not record['website']) else record['website']
             cached=dict(existing.audit) if existing and existing.website==website else {}
             identity_valid=bool(existing and existing.identification.get('website_status')=='OFFICIAL_SITE_CONFIRMED' and existing.identification.get('website',existing.website)==website)
@@ -87,7 +87,7 @@ def process_job(job_id,connector=None):
                 is_new=company is None
                 if company:p['duplicates']+=1
                 else:company=Company(**record);db.add(company);db.flush()
-                if not company.suppressed:
+                if not company.suppressed and not company.deleted_at:
                     db.add(SourceRecord(company_id=company.id,campaign_id=campaign.id,payload=record))
                     incoming=record.get('facts',{}).get('checked_at','')
                     prefer_incoming=is_new or not incoming or incoming>=company.verified_at

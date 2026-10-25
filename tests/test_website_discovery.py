@@ -108,10 +108,10 @@ def test_migration_0005_to_0006_keeps_crm_history_and_source_files(tmp_path):
     from app.manage import migrate
     cfg=Config('alembic.ini');command.upgrade(cfg,'0005')
     with Session() as db:
-        c=Company(identity='migration:kept',name='Existing fixture',phone='+41210000099',manual_fields=['phone'],suppressed=1,status='Ne plus contacter')
-        camp=Campaign(name='Existing campaign',config=CampaignInput(name='Existing').model_dump(),state='completed');db.add_all([c,camp]);db.flush()
-        db.add(Membership(campaign_id=camp.id,company_id=c.id));db.add(Activity(company_id=c.id,kind='note',text='Keep this existing note'))
-        persist_audit(db,c,campaign=camp);db.commit();cid=c.id
+        cid=db.execute(Company.__table__.insert().values(identity='migration:kept',name='Existing fixture',phone='+41210000099',manual_fields=['phone'],suppressed=1,status='Ne plus contacter')).inserted_primary_key[0]
+        camp=Campaign(name='Existing campaign',config=CampaignInput(name='Existing').model_dump(),state='completed');db.add(camp);db.flush()
+        db.add(Membership(campaign_id=camp.id,company_id=cid));db.add(Activity(company_id=cid,kind='note',text='Keep this existing note'))
+        db.add(AuditRun(company_id=cid,campaign_id=camp.id,rubric_version='legacy-fixture',fingerprint='legacy-fixture',config={},result={'fixture':True}));db.commit()
     folder=DATA/'osm';folder.mkdir();pointer=folder/'current.json';pointer.write_text('untouched source pointer fixture')
     migrate()
     with Session() as db:

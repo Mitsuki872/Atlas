@@ -1,3 +1,6 @@
+# 1.5.1
+Tableau Site/Présence synchronisé et mesures partielles, indicateur global d’analyse réelle, barre de sélection et suppression groupée avec sauvegarde et conservation de l’historique. Migration 0008. Voir PATCH_V1_5_1.md.
+
 # 1.5.0 — parcours simple et gratuit
 
 Relance de 25 nouveaux candidats sans doublons de campagne, vue dernier lot ; catalogue français de plus de 50 secteurs avec suggestions séparées du filtrage ; cinq statuts colorés avec migration/historique/oppositions ; menus stylisés accessibles ; numéros/e-mails copiables et liens externes directs sans placeholder #, délais de requête. Pipeline retiré, ATLAS réduit à la sélection/export ; notes conservées. Contrôles web gratuits automatiques et présence OSM sourcée, graphiques partiels honnêtes, tri Exploitables/À vérifier/Toutes. Adaptateur, clés et commandes de recherche payante retirés. Voir SIMPLE_WORKFLOW_V1_5.md.

@@ -109,7 +109,7 @@ def test_status_migration_keeps_history_opposition_and_removes_retired_key(tmp_p
     from sqlalchemy import select,func
     command.upgrade(Config('alembic.ini'),'0006')
     with Session() as db:
-        for i,status in enumerate(['Nouveau','À appeler','Sans réponse','Intéressé','Client','Ne plus contacter']):db.add(Company(identity='migration:'+str(i),name='Fixture '+str(i),phone='+41210000001',status=status,manual_fields=['phone']))
+        for i,status in enumerate(['Nouveau','À appeler','Sans réponse','Intéressé','Client','Ne plus contacter']):db.execute(Company.__table__.insert().values(identity='migration:'+str(i),name='Fixture '+str(i),phone='+41210000001',status=status,manual_fields=['phone']))
         db.commit()
     (DATA/'search-provider.env').write_text('SYNTHETIC obsolete credential fixture')
     migrate()
@@ -138,3 +138,46 @@ def test_collection_queues_free_checks_without_waiting_for_site(client,monkeypat
         assert db.get(Campaign,cid).state=='completed'
         assert db.scalar(select(func.count()).select_from(Membership))==1
         assert db.scalar(select(WebsiteJob)).state=='queued'
+
+def test_current_analysis_reports_only_actual_running_jobs(client):
+    from app.db import WebsiteJob,AuditRun
+    with Session() as db:
+        c=Company(identity='test:live',name='Synthetic live',website='https://example.org');db.add(c);db.flush()
+        j=WebsiteJob(company_id=c.id,state='queued');db.add(j);db.commit();jid=j.id;cid=c.id
+    assert client.get('/api/analysis/current').json()=={'active':False}
+    with Session() as db:db.get(WebsiteJob,jid).state='running';db.commit()
+    r=client.get('/api/analysis/current').json()
+    assert r['active'] and r['company_id']==cid and r['website']=='https://example.org'
+    with Session() as db:db.get(WebsiteJob,jid).state='done';db.commit()
+    assert not client.get('/api/analysis/current').json()['active']
+
+def test_bulk_delete_hides_records_preserves_history_and_cancels_work(client):
+    from app.db import WebsiteJob,OutreachSuppression,DATA
+    with Session() as db:
+        c=Company(identity='test:delete',name='Synthetic deletion',phone='+41210000001',suppressed=1)
+        other=Company(identity='test:keep',name='Keep',phone='+41210000002');db.add_all([c,other]);db.flush()
+        cid=c.id;db.add_all([Activity(company_id=cid,kind='note',text='Keep history'),OutreachSuppression(company_id=cid,reason='opposition',source='test'),WebsiteJob(company_id=cid,state='queued')]);db.commit()
+    result=client.post('/api/companies/bulk-delete',json={'ids':[cid,cid,'missing']})
+    assert result.status_code==200
+    assert result.json()['deleted']==1 and (DATA/'backups'/result.json()['backup']).is_file()
+    assert client.get('/api/companies?screening=all').json()['total']==1
+    assert client.get('/api/dashboard').json()['companies']==1
+    assert client.post('/api/planning/workspace',json={'ids':[cid]}).json()['selected']==[]
+    assert client.post('/api/companies/'+cid+'/find-website',json={}).status_code==409
+    with Session() as db:
+        assert db.get(Company,cid).deleted_at and db.get(Company,cid).suppressed
+        assert db.scalar(select(Activity).where(Activity.company_id==cid)).text=='Keep history'
+        assert db.scalar(select(OutreachSuppression).where(OutreachSuppression.company_id==cid))
+        assert db.scalar(select(WebsiteJob).where(WebsiteJob.company_id==cid)).state=='cancelled'
+    assert client.post('/api/companies/bulk-delete',json={'ids':[cid]}).json()['deleted']==0
+    assert client.post('/api/companies/bulk-delete',json={'ids':[]}).status_code==422
+
+def test_bulk_delete_stops_when_backup_fails(client,monkeypatch):
+    with Session() as db:
+        c=Company(identity='test:backup-failure',name='Keep when backup fails');db.add(c);db.commit();cid=c.id
+    def fail():raise RuntimeError('Controlled backup failure')
+    monkeypatch.setattr('app.manage.backup_database',fail)
+    import pytest
+    with pytest.raises(RuntimeError,match='Controlled backup failure'):
+        client.post('/api/companies/bulk-delete',json={'ids':[cid]})
+    with Session() as db:assert db.get(Company,cid).deleted_at is None
