@@ -1,3 +1,7 @@
+# Mise à jour 1.3
+
+Voir [SCORING_V1_3.md](SCORING_V1_3.md) : sauvegarder, Stop.bat, copier les fichiers en conservant data/.venv, Install.bat, Start.bat puis Préparer la copie suisse pour reconstruire l’index v4 depuis le PBF vérifié existant. Tri par flèches dans les en-têtes ; métiers séparés par des virgules. Les mesures non disponibles restent inconnues. Windows non exécuté dans ce cloud.
+
 # Guide utilisateur
 
 **V1.2 :** la source par défaut est la copie OSM locale. Préparer d’abord l’annuaire suisse via le bouton du Dashboard/Campagnes/Paramètres, puis lancer les campagnes. Les anciennes campagnes sans source explicite passent au local pour leur prochaine découverte ; leurs résultats et le CRM sont conservés. L’audit est optionnel et désactivé par défaut pour les nouvelles campagnes. Guide pas à pas : LOCAL_OSM_GUIDE.md.

@@ -37,6 +37,6 @@ def test_atlas_is_structured_and_does_not_invent_hours():
     assert data['margin_minutes']==5
     assert json.loads(prompt.split('données) :\n')[1])==data
 def test_config_constraints():
-    with pytest.raises(ValueError):CampaignInput(name='x',sectors=['injected";out;'])
+    with pytest.raises(ValueError):CampaignInput(name='x',sectors=['bad\x00text'])
     with pytest.raises(ValueError):CampaignInput(name='x',max_prospects=10000)
     with pytest.raises(ValueError):CampaignInput(name='x',budget=-1)

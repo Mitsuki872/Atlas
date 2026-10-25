@@ -40,3 +40,7 @@ Migration additive 0003 : email, canton, contacts JSON structurés et quality_sc
 ## Source locale V1.2
 
 `osm_download.py` télécharge un snapshot Geofabrik HTTPS fixé/contrôlé, avec Range et empreinte fournisseur. `osm_index.py` utilise osmium + shapely pour lire le PBF en flux, assembler les limites administratives et construire un index SQLite distinct du CRM. Manifest activé atomiquement après intégrité. `osm_local.py` exécute la découverte hors réseau avec les mêmes identités OSM. `datasets.py` conserve les tâches de préparation via la migration 0004, avec progression, annulation et reprise. Le worker priorise ces tâches et récupère les préparations interrompues au redémarrage. Les sources plus anciennes ne remplacent pas les contacts plus récents ; les corrections manuelles restent prioritaires. L’index 3 ne contient que des objets nommés dans les huit catégories prises en charge. Aucun service supplémentaire quotidien.
+
+
+## 1.3
+Migration 0005 : companies.identification/qualification et audit_runs, criterion_results, audit_evidence, score_snapshots, audit_opportunities, outreach_suppressions. Modules scoring (grille versionnée/calcul), audits (historique/cache/jobs), scoring_api (identification/observations/réglages/archive/événements), quick_audit (preuves HTTP/DOM), audit_adapters (frontière autorisée/budget/prompt optionnel). Aucun changement de stack. Voir docs/SCORING_INTEGRATION.md et SCORING_V1_3.md.

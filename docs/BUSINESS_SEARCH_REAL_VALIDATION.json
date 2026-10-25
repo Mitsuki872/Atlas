@@ -1,0 +1,34 @@
+{
+  "validated_at": "2026-10-25T11:43:41.107686+00:00",
+  "synthetic": false,
+  "network_disabled": true,
+  "snapshot_at": "2026-10-20T20:23:47+00:00",
+  "scope": "Vaud",
+  "results": {
+    "fleuriste": {
+      "available_in_index": 71,
+      "selected": 5,
+      "seconds": 0.147
+    },
+    "fiduciaire": {
+      "available_in_index": 10,
+      "selected": 5,
+      "seconds": 0.123
+    },
+    "fitness": {
+      "available_in_index": 86,
+      "selected": 5,
+      "seconds": 0.123
+    },
+    "hôtel": {
+      "available_in_index": 224,
+      "selected": 5,
+      "seconds": 0.133
+    },
+    "office=lawyer": {
+      "available_in_index": 9,
+      "selected": 5,
+      "seconds": 0.109
+    }
+  }
+}

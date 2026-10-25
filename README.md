@@ -1,3 +1,7 @@
+# Version 1.3 — qualification PME
+
+Tri par flèches dans les colonnes, métiers libres et scores A/B/C explicables avec couverture, preuves et historique. [Installation et limites réelles](SCORING_V1_3.md). Mise à jour additive : conserver data/.venv, lancer Install.bat, puis reconstruire l’index local à la demande. Google/avis/IA/Lighthouse ne sont pas configurés : critères correspondants inconnus. Les sections 1.2 ci-dessous restent un historique.
+
 # Prospect Engine — 1.2.0 — recherche OSM locale
 
 Application locale de prospection B2B, en français. Le patch [V1.1 — Qualité des prospects](PATCH_V1_1.md) améliore le projet existant avec une migration additive et sauvegarde préalable. **La V1 intégrale n’est pas encore validée.** Consulter [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) et [TEST_REPORT.md](TEST_REPORT.md) avant utilisation.

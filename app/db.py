@@ -43,6 +43,8 @@ class Company(Base):
     facts: Mapped[dict] = mapped_column(JSON, default=dict)
     audit: Mapped[dict] = mapped_column(JSON, default=dict)
     score: Mapped[dict] = mapped_column(JSON, default=dict)
+    qualification: Mapped[dict] = mapped_column(JSON, default=dict)
+    identification: Mapped[dict] = mapped_column(JSON, default=dict)
     manual_fields: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[str] = mapped_column(String, default=now)
     verified_at: Mapped[str] = mapped_column(String, default=now)
@@ -103,3 +105,54 @@ class DatasetJob(Base):
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(String,default=now)
     updated_at: Mapped[str] = mapped_column(String,default=now)
+
+class AuditRun(Base):
+    __tablename__='audit_runs'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    company_id: Mapped[str] = mapped_column(ForeignKey('companies.id'),index=True)
+    campaign_id: Mapped[str | None] = mapped_column(ForeignKey('campaigns.id'))
+    mode: Mapped[str] = mapped_column(String,default='QUICK')
+    status: Mapped[str] = mapped_column(String,default='completed')
+    rubric_version: Mapped[str] = mapped_column(String)
+    fingerprint: Mapped[str] = mapped_column(String,index=True)
+    config: Mapped[dict] = mapped_column(JSON)
+    context: Mapped[dict] = mapped_column(JSON,default=dict)
+    input: Mapped[dict] = mapped_column(JSON,default=dict)
+    result: Mapped[dict] = mapped_column(JSON,default=dict)
+    stages: Mapped[list] = mapped_column(JSON,default=list)
+    tool_versions: Mapped[dict] = mapped_column(JSON,default=dict)
+    error_summary: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[str] = mapped_column(String,default=now)
+    finished_at: Mapped[str | None] = mapped_column(String)
+class CriterionResult(Base):
+    __tablename__='criterion_results'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    audit_id: Mapped[str] = mapped_column(ForeignKey('audit_runs.id'),index=True)
+    code: Mapped[str] = mapped_column(String)
+    payload: Mapped[dict] = mapped_column(JSON)
+class AuditEvidence(Base):
+    __tablename__='audit_evidence'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    audit_id: Mapped[str] = mapped_column(ForeignKey('audit_runs.id'),index=True)
+    reference: Mapped[str] = mapped_column(String)
+    payload: Mapped[dict] = mapped_column(JSON)
+class ScoreSnapshot(Base):
+    __tablename__='score_snapshots'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    audit_id: Mapped[str] = mapped_column(ForeignKey('audit_runs.id'),index=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    computed_at: Mapped[str] = mapped_column(String,default=now)
+class Opportunity(Base):
+    __tablename__='audit_opportunities'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    audit_id: Mapped[str] = mapped_column(ForeignKey('audit_runs.id'),index=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    review_status: Mapped[str] = mapped_column(String,default='REVIEW_REQUIRED')
+class OutreachSuppression(Base):
+    __tablename__='outreach_suppressions'
+    id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
+    company_id: Mapped[str] = mapped_column(ForeignKey('companies.id'),index=True)
+    reason: Mapped[str] = mapped_column(String)
+    source: Mapped[str] = mapped_column(String)
+    created_at: Mapped[str] = mapped_column(String,default=now)
+    expires_at: Mapped[str | None] = mapped_column(String)

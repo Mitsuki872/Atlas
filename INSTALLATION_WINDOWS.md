@@ -1,3 +1,7 @@
+# Mise à jour 1.3
+
+Voir [SCORING_V1_3.md](SCORING_V1_3.md) : sauvegarder, Stop.bat, copier les fichiers en conservant data/.venv, Install.bat, Start.bat puis Préparer la copie suisse pour reconstruire l’index v4 depuis le PBF vérifié existant. Tri par flèches dans les en-têtes ; métiers séparés par des virgules. Les mesures non disponibles restent inconnues. Windows non exécuté dans ce cloud.
+
 # Installation Windows — procédure à valider sur la machine cible
 
 **Les scripts sont fournis et leur logique partagée est testée sur Linux. Leur exécution Windows n’a pas été validée. Il ne s’agit pas d’un installateur autonome signé.**

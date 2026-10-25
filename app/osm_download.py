@@ -98,3 +98,21 @@ def download_switzerland(folder,progress=lambda **kw:None,cancel=lambda:False,cl
         return target,meta
     finally:
         if own:client.close()
+
+
+def cached_extract(folder,progress=lambda **kw:None,cancel=lambda:False):
+    """Rebuild a derived index without downloading a newer daily extract implicitly."""
+    folder=Path(folder);pointer=folder/'current.json'
+    if not pointer.is_file() or pointer.stat().st_size>1_000_000:return None
+    try:
+        meta=json.loads(pointer.read_text(encoding='utf-8'))
+        if not isinstance(meta,dict):return None
+        md5=meta.get('provider_md5','');sha=meta.get('sha256','')
+        if not re.fullmatch('[a-f0-9]{32}',md5) or not re.fullmatch('[a-f0-9]{64}',sha):return None
+        checked_url(meta.get('url',''))
+        path=folder/f'switzerland-{md5}.osm.pbf'
+        if not path.is_file():return None
+        progress(stage='verifying',message='Vérification du fichier suisse existant avant reconstruction de l’index…')
+        if path.stat().st_size!=meta.get('size') or digest_file(path,'md5',cancel)!=md5 or digest_file(path,'sha256',cancel)!=sha:raise ValueError('La copie locale est corrompue ; utilisez Mettre à jour pour télécharger une copie vérifiée. Le CRM est conservé.')
+        return path,{**meta,'reused_download':True}
+    except (OSError,json.JSONDecodeError):return None

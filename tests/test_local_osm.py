@@ -94,7 +94,7 @@ def test_real_parser_on_synthetic_pbf_admin_boundaries_and_offline_search(tmp_pa
     path,meta=synthetic_pbf;folder=tmp_path/'index';saved=build_index(path,meta,folder)
     assert saved['businesses']==3 and saved['classified_businesses']==2
     assert saved['invalid_geometry']>=1
-    assert saved['counts']['Vaud']=={'restaurant':1,'plumber':1}
+    assert saved['counts']['Vaud']=={'restaurant':1,'plumber':1,'amenity=restaurant':1,'craft=plumber':1}
     monkeypatch.setattr(socket,'create_connection',lambda *a,**k:pytest.fail('Local lookup must not use network'))
     connector=LocalOSMConnector(folder)
     rows=connector.discover(CampaignInput(name='Offline',city='Synthetic Commune',sectors=['restaurant','plumber']).model_dump())

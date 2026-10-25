@@ -36,3 +36,7 @@ Les enrichissements demandent une autorisation et une confirmation du caractère
 ## Source locale V1.2
 
 Destination de téléchargement fixe, redirections HTTPS limitées au même fournisseur et aux chemins suisses attendus ; aucune URL libre. Empreinte MD5 fournisseur conservée, SHA-256 local identifié, jamais de contournement de TLS ou d’empreinte attendue. Limites de taille et d’espace disque, Range validé, fichiers corrompus générés mis à l’écart. PBF/index séparés du CRM ; publication atomique, pas de remplacement de base métier. La lecture du PBF passe par des bibliothèques natives maintenues, sans exécution de contenu OSM. Les noms/contacts restent échappés et non fiables. Les fichiers locaux contiennent des coordonnées professionnelles publiques : protéger data et les sauvegardes, respecter les finalités de réutilisation et le non-contact. Aucun extrait ni contact réel de recette distribué dans le ZIP/Git.
+
+
+## 1.3
+Identification officielle multi-champs avant audit ; observations externes strictes avec preuves et autorisation ; critères inconnus non transformés en échecs. Aucun fournisseur IA ou payant configuré. Prompt optionnel traite les pages comme données non fiables ; aucun contenu de site n’est exécuté par le calculateur. Historique immuable/versionné, oppositions cumulatives. Les références urn:prospectengine désignent le CRM/la grille locale, pas des URL externes prétendument consultées. Pas de capture navigateur non isolée.

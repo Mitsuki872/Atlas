@@ -28,7 +28,7 @@ def test_delice_domain_normalized_before_audit(monkeypatch):
     def fetch(url):seen.append(url);return 200,{'content-type':'text/html'},'<title>Fixture</title><h1>Fixture</h1>',url
     monkeypatch.setattr(n,'fetch_allowed',fetch)
     r=n.audit_website('restaurant-delice-angevin.com')
-    assert seen==['https://restaurant-delice-angevin.com']
+    assert seen==['https://restaurant-delice-angevin.com','https://restaurant-delice-angevin.com/sitemap.xml']
     assert r['normalized_url']=='https://restaurant-delice-angevin.com'
     assert r['state']=='observed'
 
@@ -142,7 +142,7 @@ def test_timeout_retry_once_no_policy_retry(monkeypatch):
     def timeout(url,**kw):calls.append(url);raise TimeoutError('controlled test')
     monkeypatch.setattr(n,'fetch_public',timeout);monkeypatch.setattr(n.time,'sleep',lambda _:None)
     with pytest.raises(TimeoutError):n.fetch_with_retry('https://example.org')
-    assert len(calls)==2
+    assert len(calls)==3
     calls.clear()
     def denied(url,**kw):calls.append(url);raise ValueError('robots denied fixture')
     monkeypatch.setattr(n,'fetch_public',denied)
@@ -189,7 +189,7 @@ def test_worker_network_does_not_lock_out_manual_corrections(client,monkeypatch)
         def discover(self,config):return [OverpassConnector().normalize({'id':99,'type':'node','tags':{'name':'QA network concurrency','website':'example.org','phone':'021 000 00 01'}})]
     record=Connector().discover({})[0]
     with Session() as db:
-        c=Company(**record);db.add(c);db.flush();company_id=c.id
+        c=Company(**record,identification={'website_status':'OFFICIAL_SITE_CONFIRMED','confidence':95});db.add(c);db.flush();company_id=c.id
         campaign=Campaign(name='Concurrency',config=CampaignInput(name='Concurrency',audit_web=True).model_dump(),state='running');db.add(campaign);db.flush();job=Job(campaign_id=campaign.id);db.add(job);db.commit();job_id=job.id
     def controlled_audit(url):
         r=client.patch('/api/companies/'+company_id,json={'phone':'+41210000009','website':'https://new.example.org'})

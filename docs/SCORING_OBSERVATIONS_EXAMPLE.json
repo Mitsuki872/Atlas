@@ -1,0 +1,24 @@
+{
+  "mode": "QUICK",
+  "reuse_authorized": true,
+  "observations": [
+    {
+      "code": "A4.1",
+      "raw_value": true,
+      "status": "MEASURED",
+      "method": "synthetic_example_not_a_real_measurement",
+      "evidence_refs": [
+        "synthetic-title"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "synthetic-title",
+      "source_url": "https://example.org/synthetic-fixture",
+      "captured_at": "2026-10-25T12:00:00+01:00",
+      "kind": "dom",
+      "value_excerpt": "EXEMPLE SYNTHÉTIQUE : <title>Exemple</title> ; remplacer par une observation réelle avant usage."
+    }
+  ]
+}

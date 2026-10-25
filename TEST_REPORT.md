@@ -1,3 +1,34 @@
+# Validation 1.3 — 25 octobre 2026
+
+**137 tests backend réussis, 0 échec, 0 ignoré** ; un avertissement de dépréciation Starlette/AnyIO. Syntaxe JS, compilation Python et cohérence des dépendances vérifiées. Les tests de migration/restauration s’exécutent services arrêtés, dans des bases temporaires.
+
+**Navigateur Chromium réel** : création/édition de campagne avec trois métiers libres et mode DEEP, flèches des en-têtes dans les deux sens, tri serveur avant pagination, conservation de recherche/URL après rechargement, onglets critères/preuves/historique, vérification d’identité multi-champs et réglage versionné du barème. Parcours précédent conservé : contacts, CRM, presse-papiers réel, ATLAS, sauvegarde, mobile sans erreur JS. Préparation de téléchargement et erreur Overpass : réponses UI contrôlées explicitement, pas un nouvel accès source réel.
+
+**Données réelles distinctes des fixtures :** même PBF Geofabrik suisse vérifié, snapshot 20 octobre 2026. Index v4 construit en 74,22 s sur Linux : 202 231 objets nommés avec tags d’activité (inclut des organismes/équipements non commerciaux). Recherche sans réseau de cinq activités hors liste initiale dans Vaud : fleuriste 71, fiduciaire 10, fitness 86, hôtel 224, office=lawyer 9. Rapport sans noms/contacts dans docs/BUSINESS_SEARCH_REAL_VALIDATION.json. Trois campagnes réelles restaurants/plomberie à nouveau exécutées hors ligne : 12 fiches, pas de doublons, correction/note/opposition/export conservés (docs/LOCAL_OSM_REAL_VALIDATION_1_3.json). Aucun audit réel de leurs sites ou appel/e-mail effectué.
+
+## Acceptation du cahier des charges — tests synthétiques explicites
+
+| Cas | Vérification effectuée |
+|---|---|
+| 1, 8 — domaine absent d’OSM / homonymes | Identification via preuve externe déclarée, deux champs dont téléphone ; nom seul refusé, homonyme distinct sans site attribué |
+| 2 — site non trouvé | Deux hôtes documentés exigés, A jamais zéro, création provisoire |
+| 3 — Lighthouse absent | A2 UNKNOWN, couverture réduite, statut provisoire/non évaluable |
+| 4 — 503 puis 200 | Vrai code de retry exécuté sur transport contrôlé, pas de panne durable déclarée |
+| 5 — téléphone sans formulaire | HTML synthétique réellement parsé, A5.1/A5.4 accordés |
+| 6 — plombier sans Instagram | Configuration métier traçable, critères sociaux NOT_APPLICABLE |
+| 7 — franchise | C3.1 zéro sur déclaration vérifiée, statut commercial distinct |
+| 9, 13 — injection / IA sans preuve | Texte de page jamais exécuté ; notes sans références UNKNOWN |
+| 10, 12, 17 — calcul | UNKNOWN/NA, normalisation, bornes, totaux A/B/C=100 et répétabilité à entrées/version/date identiques |
+| 11 — opposition | Persiste après calcul/réimport, table d’oppositions additive |
+| 14 — interruption | Tests existants pause/reprise campagne conservés ; audit persistant en attente, annulation puis nouveau traitement, cache/idempotence |
+| 15 — export/import | JSON + historiques/grille/critères/preuves round-trip, colonnes CSV historiques conservées, corrections/opposition locales prioritaires |
+| 16 — budget | Adaptateur refuse avant invocation du fournisseur quand plafond dépassé ; aucun fournisseur payant réel branché |
+| 18 — UI explicable | Onglets, sous-critères, valeurs/preuves, historique et couverture dans navigateur réel |
+
+Ces tests démontrent les règles et interfaces, **pas l’existence d’une intégration Google, avis, Lighthouse ou IA réelle**. Fournisseurs non configurés : UNKNOWN. Pas de validation humaine de calibration, pas de benchmark IA, pas de validation juridique et pas d’exécution Windows. Voir SCORING_V1_3.md pour les divergences et limites exactes.
+
+---
+
 # Validation — version 1.2 — copie suisse locale
 
 **102 tests backend réussis, zéro échec, zéro ignoré**, avec un avertissement de dépréciation Starlette/AnyIO. Syntaxe JavaScript et compilation Python vérifiées. Les tests supplémentaires couvrent téléchargement interrompu/Range, contrôle d’empreinte et cache corrompu, annulation, URL fixe, création atomique, parsing d’un PBF synthétique avec géométries administratives, coordonnées manquantes, recherche communale, conservation du CRM et corrections plus récentes.

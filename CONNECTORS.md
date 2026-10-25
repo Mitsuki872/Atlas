@@ -1,3 +1,7 @@
+# Évolution 1.3
+
+Recherche locale par métiers libres, alias explicites et catégories OSM générales (index v4). Les huit catégories de la version antérieure restent reconnues. Sources de visibilité/IA : adaptateur d’observations autorisées sans fournisseur réseau configuré ; critères inconnus par défaut. Les essais réels supplémentaires sont agrégés dans docs/BUSINESS_SEARCH_REAL_VALIDATION.json. Voir SCORING_V1_3.md.
+
 # Source principale V1.2 — copie suisse locale
 
 Téléchargement réel et vérifié depuis Geofabrik, index administratif local et campagnes hors réseau validés. Voir LOCAL_OSM_GUIDE.md et docs/LOCAL_OSM_REAL_VALIDATION.json. La source par défaut n’appelle plus Overpass. Le nombre total de candidats est connu dans cet index, sans prétendre à un recensement complet. ODbL et attribution obligatoires. Les descriptions Overpass ci-dessous concernent désormais l’option distante et les versions historiques.

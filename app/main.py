@@ -17,8 +17,11 @@ from app.connectors import OverpassConnector
 from app.contacts import normalize_email, normalize_phone, normalize_website, contact, quality_score
 from app.filters import CompanyFilters, company_query
 from app.network import audit_capabilities
+from app.audits import refresh_qualification,persist_audit
+from app.scoring_api import router as scoring_router
 
-app=FastAPI(title='Prospect Engine',version='1.2.0')
+app=FastAPI(title='Prospect Engine',version='1.3.0')
+app.include_router(scoring_router)
 STATIC=Path(__file__).parent/'static'
 TOKEN=secrets.token_urlsafe(32)
 @app.middleware('http')
@@ -81,6 +84,8 @@ def campaign_action(id:str,action:str):
             c.error=None
             job=db.scalar(select(Job).where(Job.campaign_id==id).order_by(Job.created_at.desc()))
             if job:job.state='queued'
+        for member in db.scalars(select(Membership).where(Membership.campaign_id==id)):
+            refresh_qualification(db,must(db,Company,member.company_id),c)
         db.commit();return serialize(c)
 @app.get('/api/companies')
 def companies(filters:CompanyFilters=Depends(),offset:int=Query(default=0,ge=0),limit:int=Query(default=50,ge=1,le=200)):
@@ -128,17 +133,20 @@ def update_company(id:str,data:CompanyPatch):
         if c.suppressed and data.status and data.status!='Ne plus contacter':raise HTTPException(409,'Suppression de non-contact requise par une procédure explicite ; non disponible en V0.1.')
         changes=data.model_dump(exclude_none=True)
         if 'website' in changes and changes['website']!=c.website:
-            c.audit={};c.score={}
+            c.audit={};c.score={};c.identification={};c.qualification={}
         for key,value in changes.items():
             old=getattr(c,key);setattr(c,key,value)
             if old!=value:
                 label={'status':'Statut','name':'Nom','city':'Ville','phone':'Téléphone','website':'Site web','email':'E-mail','canton':'Canton'}[key]
                 db.add(Activity(company_id=id,kind='change',text=f'{label} : {old or "inconnu"} → {value or "inconnu"}'))
-        if data.status=='Ne plus contacter':c.suppressed=1
+        if data.status=='Ne plus contacter':
+            c.suppressed=1
+            from app.db import OutreachSuppression
+            db.add(OutreachSuppression(company_id=id,reason='USER_OPPOSITION',source='Modification CRM'))
         for kind in ('phone','email','website'):
             if kind in changes:
                 c.contacts=[item for item in c.contacts if item['kind']!=kind]+([contact(kind,changes[kind],'Saisie manuelle',now(),'manual','user_verified')] if changes[kind] else [])
-        c.manual_fields=list(set(c.manual_fields)|set(changes));c.score=score_company(c,current_weights(db));c.quality_score=quality_score(c);db.commit();return serialize(c)
+        c.manual_fields=list(set(c.manual_fields)|set(changes));refresh_qualification(db,c);c.score=score_company(c,current_weights(db));c.quality_score=quality_score(c);db.commit();return serialize(c)
 class ActivityInput(BaseModel):
     model_config=ConfigDict(extra='forbid')
     kind:str
@@ -163,7 +171,7 @@ def add_activity(id:str,data:ActivityInput):
         c=must(db,Company,id)
         if c.suppressed and data.kind in ('call','reminder'):raise HTTPException(409,'Entreprise à ne plus contacter')
         payload=data.model_dump();payload['due_at']=data.due_at.isoformat() if data.due_at else None
-        a=Activity(company_id=id,**payload);db.add(a);db.commit();return serialize(a)
+        a=Activity(company_id=id,**payload);db.add(a);db.flush();refresh_qualification(db,c);db.commit();return serialize(a)
 class Selection(BaseModel):
     ids:list[str]=Field(min_length=1,max_length=1000)
 @app.post('/api/planning/export')
@@ -191,14 +199,15 @@ def export_companies(format:str='json',ids:str='',filters:CompanyFilters=Depends
     with Session() as db:
         query=company_query(filters)
         if ids:query=query.where(Company.id.in_(ids.split(',')))
-        data=[serialize(c) for c in db.scalars(query)]
+        from app.db import AuditRun
+        data=[{**serialize(c),'audit_history':[serialize(r) for r in db.scalars(select(AuditRun).where(AuditRun.company_id==c.id).order_by(AuditRun.started_at))]} for c in db.scalars(query)]
     if format=='json':return Response(json.dumps(data,ensure_ascii=False,indent=2),media_type='application/json',headers={'Content-Disposition':'attachment; filename=prospects.json'})
     if format!='csv':raise HTTPException(422,'Format inconnu')
-    out=io.StringIO();writer=csv.writer(out);writer.writerow(['id','nom','ville','canton','secteur','telephone','email','site','statut','opportunite','qualite_donnees','source'])
+    out=io.StringIO();writer=csv.writer(out);writer.writerow(['id','nom','ville','canton','secteur','telephone','email','site','statut','opportunite','qualite_donnees','source','qualification_json','identification_json','audit_history_json'])
     def safe(v):
         value=str(v)
         return "'"+value if value.lstrip().startswith(('=','+','-','@','\t','\r')) else value
-    for c in data:writer.writerow([safe(v) for v in [c['id'],c['name'],c['city'],c['canton'],c['sector'],c['phone'],c['email'],c['website'],c['status'],c['score'].get('total'),c['quality_score'].get('total'),c['facts'].get('source','')]])
+    for c in data:writer.writerow([safe(v) for v in [c['id'],c['name'],c['city'],c['canton'],c['sector'],c['phone'],c['email'],c['website'],c['status'],c['score'].get('total'),c['quality_score'].get('total'),c['facts'].get('source',''),json.dumps(c.get('qualification',{}),ensure_ascii=False),json.dumps(c.get('identification',{}),ensure_ascii=False),json.dumps(c.get('audit_history',[]),ensure_ascii=False)]])
     return Response('\ufeff'+out.getvalue(),media_type='text/csv',headers={'Content-Disposition':'attachment; filename=prospects.csv'})
 @app.get('/api/dashboard')
 def dashboard():
@@ -206,7 +215,7 @@ def dashboard():
         rows=list(db.scalars(select(Company)));acts=list(db.scalars(select(Activity).order_by(Activity.created_at.desc())))
         counts={s:sum(c.status==s for c in rows) for s in STATUSES}
         calls=[a for a in acts if a.kind=='call'];clients=counts['Client']
-        return {'companies':len(rows),'analyzed':sum(c.audit.get('state')=='observed' for c in rows),'qualified':counts['Qualifié'],'to_call':counts['À appeler'],'planned':counts['Appel planifié'],'calls':len(calls),'no_answer':sum(a.outcome=='Sans réponse' for a in calls),'interested':counts['Intéressé'],'quotes':sum(a.kind=='quote' for a in acts),'clients':clients,'conversion':round(clients/len(rows)*100,1) if rows else 0,'quote_value':sum(a.amount for a in acts if a.kind=='quote'),'sales_value':sum(a.amount for a in acts if a.kind=='sale'),'opportunity_value':sum(a.amount for a in acts if a.kind=='opportunity'),'measured_cost_chf':0,'active_campaigns':db.scalar(select(func.count()).select_from(Campaign).where(Campaign.state=='running')),'sectors':{s:sum(c.sector==s for c in rows) for s in SECTORS},'timeline':{d:sum(c.created_at[:10]==d for c in rows) for d in sorted({c.created_at[:10] for c in rows})},'activities':[serialize(a) for a in acts[:15]],'reminders':[serialize(a) for a in acts if a.kind=='reminder' and a.due_at and a.due_at>=now()][:15]}
+        return {'companies':len(rows),'analyzed':sum(c.audit.get('state')=='observed' for c in rows),'qualified':counts['Qualifié'],'to_call':counts['À appeler'],'planned':counts['Appel planifié'],'calls':len(calls),'no_answer':sum(a.outcome=='Sans réponse' for a in calls),'interested':counts['Intéressé'],'quotes':sum(a.kind=='quote' for a in acts),'clients':clients,'conversion':round(clients/len(rows)*100,1) if rows else 0,'quote_value':sum(a.amount for a in acts if a.kind=='quote'),'sales_value':sum(a.amount for a in acts if a.kind=='sale'),'opportunity_value':sum(a.amount for a in acts if a.kind=='opportunity'),'measured_cost_chf':0,'active_campaigns':db.scalar(select(func.count()).select_from(Campaign).where(Campaign.state=='running')),'sectors':{s:sum(c.sector==s for c in rows) for s in sorted({c.sector for c in rows})},'timeline':{d:sum(c.created_at[:10]==d for c in rows) for d in sorted({c.created_at[:10] for c in rows})},'activities':[serialize(a) for a in acts[:15]],'reminders':[serialize(a) for a in acts if a.kind=='reminder' and a.due_at and a.due_at>=now()][:15]}
 @app.get('/api/diagnostics')
 def diagnostics():
     with Session() as db:
@@ -316,13 +325,14 @@ def import_records(data:ImportBatch):
             facts={'source':row.source_url,'confidence':'user_supplied','hours':parse_hours(row.opening_hours,row.source_url,now()),'import_source_id':row.source_id}
             fields={'name':row.name,'city':row.city,'sector':row.sector,'phone':normalize_phone(row.phone),'email':normalize_email(row.email),'canton':row.canton,'website':normalize_website(row.website),'facts':facts}
             if c:
+                if 'website' not in c.manual_fields and fields['website']!=c.website:c.identification={};c.audit={}
                 for k,v in fields.items():
                     if k not in c.manual_fields:setattr(c,k,v)
                 updated+=1
             else:
                 c=Company(identity=key,**fields);db.add(c);db.flush();created+=1
             c.contacts=[x for x in c.contacts if x.get('origin')!='user-import']+[contact(k,getattr(c,k),row.source_url,now(),'user-import','user_supplied') for k in ('phone','email','website') if getattr(c,k) and k not in c.manual_fields]
-            c.score=score_company(c,current_weights(db));c.quality_score=quality_score(c)
+            c.score=score_company(c,current_weights(db));c.quality_score=quality_score(c);refresh_qualification(db,c)
             db.add(SourceRecord(company_id=c.id,payload=row.model_dump()))
         db.commit()
     return {'created':created,'updated':updated,'source':'user-import','external_discovery_verified':False}
@@ -375,7 +385,7 @@ def enrich_company(id:str,consent:EnrichmentConsent):
         if c.website!=website:raise HTTPException(409,'Site modifié pendant l’enrichissement ; résultat non appliqué')
         apply_enrichment(c,result)
         db.add(SourceRecord(company_id=id,payload={'kind':'authorized-enrichment',**result}))
-        c.quality_score=quality_score(c);db.commit()
+        c.quality_score=quality_score(c);refresh_qualification(db,c);db.commit()
         return result
 @app.post('/api/companies/{id}/audit')
 def audit_company(id:str,consent:EnrichmentConsent):
@@ -385,10 +395,13 @@ def audit_company(id:str,consent:EnrichmentConsent):
         c=must(db,Company,id)
         if c.suppressed:raise HTTPException(409,'Entreprise exclue')
         if not c.website:raise HTTPException(422,'Site absent')
-        website=c.website;result=audit_website(website);db.refresh(c)
+        if c.identification.get('website_status')!='OFFICIAL_SITE_CONFIRMED':raise HTTPException(422,'Confirmez d’abord l’identité du site avec deux champs concordants et leurs preuves dans Identification.')
+        from app.scoring import rubric
+        limits=rubric(db);website=c.website;db.commit();result=audit_website(website,limits);db.refresh(c)
         if c.suppressed:raise HTTPException(409,'Entreprise exclue pendant l’audit')
         if c.website!=website:raise HTTPException(409,'Site modifié pendant l’audit ; résultat non appliqué')
         c.audit=result;c.score=score_company(c,current_weights(db));c.quality_score=quality_score(c)
+        persist_audit(db,c,force=True)
         db.add(SourceRecord(company_id=id,payload={'kind':'website-audit',**result}));db.commit()
         return result
 
@@ -432,7 +445,7 @@ def prepare_dataset(data:PrepareDataset):
         active=db.scalar(select(DatasetJob).where(DatasetJob.state.in_(['queued','running'])))
         if active:return serialize(active)
         if status['ready'] and not data.refresh:return {'state':'completed','progress':{'stage':'ready','message':'Copie déjà prête.'}}
-        job=DatasetJob(progress={'stage':'queued','message':'Préparation en attente du worker.'});db.add(job);db.commit();return serialize(job)
+        job=DatasetJob(progress={'stage':'queued','message':'Préparation en attente du worker.','requested_refresh':data.refresh});db.add(job);db.commit();return serialize(job)
 @app.post('/api/dataset/{id}/cancel')
 def cancel_dataset(id:str):
     with Session() as db:

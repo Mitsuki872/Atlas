@@ -3,7 +3,7 @@ import socket
 import threading
 import time
 from sqlalchemy import select
-from app.db import Session, Campaign, Company, Job, Membership, Setting, Log, SourceRecord, DatasetJob, now
+from app.db import Session, Campaign, Company, Job, Membership, Setting, Log, SourceRecord, DatasetJob, AuditRun, now
 from app.connectors import OverpassConnector
 from app.source_errors import SourceError
 from app.domain import score_company, normalize_name
@@ -36,6 +36,7 @@ def process_job(job_id,connector=None):
                 job.state='queued';db.commit();return
             if connector.id=='osm-overpass':
                 db.merge(Setting(key='overpass_last_request',value={'time':time.time()}))
+            campaign.progress={**campaign.progress,'stage':'discovery'}
             config=dict(campaign.config);db.commit()
             records=connector.discover(config)
             job.records=records
@@ -47,7 +48,7 @@ def process_job(job_id,connector=None):
             job=db.get(Job,job_id);campaign=db.get(Campaign,job.campaign_id)
             if campaign.state!='running' or stop_event.is_set():job.state='queued';db.commit();return
             if job.cursor>=len(job.records):
-                job.state='done';campaign.state='completed';campaign.error=None;db.commit();return
+                job.state='done';campaign.state='completed';campaign.error=None;campaign.progress={**campaign.progress,'stage':'completed'};db.commit();return
             record=dict(job.records[job.cursor]);config=dict(campaign.config)
             from app.contacts import osm_contacts,normalize_phone,normalize_website
             facts=record.get('facts',{});contacts=record.get('contacts') or osm_contacts(facts.get('raw_tags',{}),facts.get('source',''),facts.get('checked_at',now()))
@@ -62,19 +63,20 @@ def process_job(job_id,connector=None):
             existing=db.scalar(select(Company).where(Company.identity==record['identity']))
             suppressed=bool(existing and existing.suppressed)
             website=existing.website if existing and 'website' in existing.manual_fields else record['website']
-            cached=dict(existing.audit) if existing else {}
+            cached=dict(existing.audit) if existing and existing.website==website else {}
+            identity_valid=bool(existing and existing.identification.get('website_status')=='OFFICIAL_SITE_CONFIRMED' and existing.identification.get('website',existing.website)==website)
             cursor=job.cursor;campaign_id=campaign.id
         audit=None;enrichment=None
         if not excluded and not suppressed:
             from datetime import datetime,timezone,timedelta
             checked=cached.get('checked_at')
             fresh=checked and datetime.fromisoformat(checked)>datetime.now(timezone.utc)-timedelta(hours=24)
-            if config['audit_web'] and not fresh:audit=audit_website(website)
+            if config['audit_web'] and not fresh and identity_valid:audit=audit_website(website)
             if config.get('enrich_contacts') and website:enrichment=enrich_website(website)
         with Session() as db:
             job=db.get(Job,job_id);campaign=db.get(Campaign,campaign_id)
             if job.cursor!=cursor:raise RuntimeError('Curseur modifié par un autre traitement')
-            p=dict(campaign.progress);p['normalized']+=1
+            p=dict(campaign.progress);p['stage']='qualification';p['normalized']+=1
             if not excluded:
                 company=db.scalar(select(Company).where(Company.identity==record['identity']))
                 is_new=company is None
@@ -86,6 +88,8 @@ def process_job(job_id,connector=None):
                     prefer_incoming=is_new or not incoming or incoming>=company.verified_at
                     for key in ('name','city','canton','sector','phone','email','website','facts'):
                         if prefer_incoming and key not in company.manual_fields and key in record:setattr(company,key,record[key])
+                    if company.website!=website and audit is not None:audit=None
+                    if company.identification.get('website') and company.identification['website']!=company.website:company.identification={};company.audit={}
                     saved={(c['kind'],c['value'],c.get('source')):c for c in company.contacts}
                     for item in contacts:
                         key=(item['kind'],item['value'],item.get('source'))
@@ -100,8 +104,14 @@ def process_job(job_id,connector=None):
                     weights=db.get(Setting,'scoring')
                     company.score=score_company(company,weights.value if weights else None);company.quality_score=quality_score(company)
                     company.verified_at=incoming if is_new and incoming else max(company.verified_at,incoming)
+                    from app.audits import persist_audit
+                    persist_audit(db,company,campaign=campaign,mode=config.get('audit_mode','QUICK'))
                     if not db.get(Membership,(campaign.id,company.id)):db.add(Membership(campaign_id=campaign.id,company_id=company.id))
-                    if company.score['total'] is not None and company.score['total']>=config['min_score']:p['qualified']+=1
+                    q=company.qualification;scores=q.get('scores',{})
+                    qualifies=q.get('eligible_for_outreach',False) and scores.get('opportunity',{}).get('value') is not None and scores['opportunity']['value']>=config.get('min_c',0)
+                    for field,key in [('max_a','site'),('max_b','visibility')]:
+                        if config.get(field) is not None:qualifies=qualifies and scores.get(key,{}).get('value') is not None and scores[key]['value']<=config[field]
+                    if qualifies:p['qualified']+=1
             job.cursor+=1;p['remaining']=len(job.records)-job.cursor;campaign.progress=p
             db.commit()
 def record_failure(job_id,exc):
@@ -131,17 +141,29 @@ def run():
     with Session() as db:
         for job in db.scalars(select(Job).where(Job.state=='running')):job.state='queued'
         for job in db.scalars(select(DatasetJob).where(DatasetJob.state=='running')):job.state='queued'
+        for audit in db.scalars(select(AuditRun).where(AuditRun.status=='running')):audit.status='queued'
         db.commit()
     while not stop_event.is_set():
         with Session() as db:
             db.merge(Setting(key='worker_heartbeat',value={'at':now()}));db.commit()
             job=db.scalar(select(Job).join(Campaign).where(Job.state=='queued',Campaign.state=='running').order_by(Job.created_at))
             job_id=job.id if job else None
+            audit=db.scalar(select(AuditRun).where(AuditRun.status=='queued').order_by(AuditRun.started_at))
+            audit_id=audit.id if audit else None
             dataset_job=db.scalar(select(DatasetJob).where(DatasetJob.state=='queued').order_by(DatasetJob.created_at))
             dataset_id=dataset_job.id if dataset_job else None
         if dataset_id:
             from app.datasets import run_dataset_job
             run_dataset_job(dataset_id,stop_event)
+        elif audit_id:
+            from app.audits import process_audit_job
+            try:process_audit_job(audit_id,stop_event)
+            except Exception as exc:
+                logging.exception('Audit failed')
+                with Session() as db:
+                    failed=db.get(AuditRun,audit_id)
+                    if failed.status!='cancelled':failed.status='failed';failed.error_summary=str(exc);failed.finished_at=now()
+                    db.commit()
         elif job_id:
             try:process_job(job_id)
             except Exception as exc:

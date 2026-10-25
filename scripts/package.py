@@ -5,10 +5,10 @@ import zipfile
 ROOT=Path(__file__).resolve().parents[1]
 DEST=ROOT/'dist'
 INCLUDE=['app','migrations','scripts','tests','docs']
-ROOT_FILES=['.gitignore','README.md','INSTALLATION_WINDOWS.md','USER_GUIDE.md','ARCHITECTURE.md','CONNECTORS.md','SECURITY.md','TEST_REPORT.md','KNOWN_LIMITATIONS.md','CHANGELOG.md','PATCH_V1_1.md','PATCH_V1_1_1.md','PATCH_V1_1_2.md','LOCAL_OSM_GUIDE.md','requirements.in','requirements.txt','package.json','package-lock.json','pytest.ini','alembic.ini','Installer.ps1','Install.bat','Start.bat','Stop.bat','Diagnose.bat','Backup.bat','Restore.bat','Uninstall.bat']
+ROOT_FILES=['.gitignore','README.md','INSTALLATION_WINDOWS.md','USER_GUIDE.md','ARCHITECTURE.md','CONNECTORS.md','SECURITY.md','TEST_REPORT.md','KNOWN_LIMITATIONS.md','CHANGELOG.md','PATCH_V1_1.md','PATCH_V1_1_1.md','PATCH_V1_1_2.md','LOCAL_OSM_GUIDE.md','SCORING_V1_3.md','requirements.in','requirements.txt','package.json','package-lock.json','pytest.ini','alembic.ini','Installer.ps1','Install.bat','Start.bat','Stop.bat','Diagnose.bat','Backup.bat','Restore.bat','Uninstall.bat']
 def main():
     DEST.mkdir(exist_ok=True)
-    archive=DEST/'ProspectEngine-1.2.0-source.zip'
+    archive=DEST/'ProspectEngine-1.3.0-source.zip'
     paths=[ROOT/name for name in ROOT_FILES]
     for folder in INCLUDE:
         paths.extend(p for p in (ROOT/folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts and p.suffix not in ('.pyc','.log'))

@@ -8,6 +8,7 @@ from app.contacts import osm_contacts
 from app.db import now
 from app.source_errors import SourceError,retry_after_seconds
 import re
+from app.business_search import KEYS,tag_for,matches
 
 class Connector(Protocol):
     id:str
@@ -41,8 +42,12 @@ def build_query(config):
     query+='.scope out count;'
     cap=min(100,config['max_prospects'])
     for sector in config['sectors']:
-        key,value=SECTORS[sector]
-        query+=f'nwr["{key}"="{value}"]["name"](area.scope);out center tags {cap};'
+        tag=tag_for(sector)
+        if tag:
+            key,value=tag;query+=f'nwr[{json.dumps(key)}={json.dumps(value)}]["name"](area.scope);out center tags {cap};'
+        else:
+            pattern=json.dumps(re.escape(sector),ensure_ascii=False)
+            query+='('+''.join(f'nwr["{key}"~{pattern},i]["name"](area.scope);' for key in ('name',*KEYS))+f');out center tags {cap};'
     return query
 
 class OverpassConnector:
@@ -68,7 +73,8 @@ class OverpassConnector:
                 records={}
                 for e in payload.get('elements',[]):
                     if e.get('type') not in ('node','way','relation'):continue
-                    r=self.normalize(e);r['canton']=config['canton'];records[r['identity']]=r
+                    r=self.normalize(e);r['canton']=config['canton'];r['facts']['categories']=[s for s in config['sectors'] if matches(s,e.get('tags',{}))]
+                    if r['facts']['categories']:r['sector']=r['facts']['categories'][0];records[r['identity']]=r
                 pool=list(records.values())
                 counts=Counter(s for r in pool for s in r['facts'].get('categories',[r['sector']]))
                 selected=choose_records(pool,config['sectors'],config['max_prospects'],config.get('distribution','balanced'))

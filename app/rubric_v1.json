@@ -1,0 +1,449 @@
+{
+  "rubric_version": "1.0",
+  "coverage_min": 60,
+  "coverage_final": 80,
+  "identity_min": 70,
+  "cache_ttl_hours": 24,
+  "max_pages": 5,
+  "max_depth": 2,
+  "domain_concurrency": 1,
+  "retries": 3,
+  "thresholds": {
+    "lcp": [
+      2.5,
+      4
+    ],
+    "cls": [
+      0.1,
+      0.25
+    ],
+    "accessibility": [
+      98,
+      90
+    ],
+    "links": [
+      99,
+      95
+    ],
+    "responses": [
+      50,
+      20
+    ],
+    "urls": [
+      100,
+      75
+    ],
+    "review_age": [
+      90,
+      365
+    ],
+    "post_age": [
+      90,
+      365
+    ],
+    "freshness": [
+      30,
+      90
+    ],
+    "brand_rank": [
+      3,
+      10
+    ],
+    "local_rank": [
+      3,
+      10,
+      20
+    ],
+    "reviews": [
+      50,
+      20,
+      5,
+      1
+    ],
+    "redirects": [
+      2,
+      5
+    ]
+  },
+  "sector_overrides": {
+    "plumber": {
+      "social_relevant": false
+    },
+    "plomberie": {
+      "social_relevant": false
+    },
+    "plombier": {
+      "social_relevant": false
+    }
+  },
+  "services": {},
+  "criteria": {
+    "A1.1": {
+      "label": "Résolution DNS",
+      "max": 3,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A1.2": {
+      "label": "Réponse accueil",
+      "max": 5,
+      "rule": "http",
+      "kind": "objective"
+    },
+    "A1.3": {
+      "label": "Certificat TLS",
+      "max": 4,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A1.4": {
+      "label": "Redirections",
+      "max": 3,
+      "rule": "redirects",
+      "kind": "objective"
+    },
+    "A2.1": {
+      "label": "Lighthouse mobile",
+      "max": 10,
+      "rule": "percentage",
+      "kind": "objective"
+    },
+    "A2.2": {
+      "label": "LCP laboratoire",
+      "max": 4,
+      "rule": "lcp",
+      "kind": "objective"
+    },
+    "A2.3": {
+      "label": "CLS laboratoire",
+      "max": 3,
+      "rule": "cls",
+      "kind": "objective"
+    },
+    "A2.4": {
+      "label": "Ressources critiques échouées",
+      "max": 3,
+      "rule": "resources",
+      "kind": "objective"
+    },
+    "A3.1": {
+      "label": "Viewport responsive",
+      "max": 3,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A3.2": {
+      "label": "Largeurs avec débordement",
+      "max": 4,
+      "rule": "overflow",
+      "kind": "objective"
+    },
+    "A3.3": {
+      "label": "Contraste AA conforme (%)",
+      "max": 4,
+      "rule": "accessibility",
+      "kind": "objective"
+    },
+    "A3.4": {
+      "label": "Contrôles nommés (%)",
+      "max": 4,
+      "rule": "accessibility",
+      "kind": "objective"
+    },
+    "A4.1": {
+      "label": "Title non vide",
+      "max": 3,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A4.2": {
+      "label": "Description non vide",
+      "max": 2,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A4.3": {
+      "label": "H1 visible non vide",
+      "max": 2,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A4.4": {
+      "label": "Indexabilité",
+      "max": 4,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A4.5": {
+      "label": "Sitemap valide",
+      "max": 2,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A4.6": {
+      "label": "Canonical valide",
+      "max": 2,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A5.1": {
+      "label": "Contact direct détecté",
+      "max": 5,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A5.2": {
+      "label": "Distance du contact en clics",
+      "max": 4,
+      "rule": "contact_depth",
+      "kind": "objective"
+    },
+    "A5.3": {
+      "label": "Coordonnées cohérentes",
+      "max": 3,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A5.4": {
+      "label": "Action de contact syntaxiquement valide",
+      "max": 3,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "A6.1": {
+      "label": "Liens internes valides (%)",
+      "max": 3,
+      "rule": "links",
+      "kind": "objective"
+    },
+    "A6.2": {
+      "label": "Erreurs JS non bénignes",
+      "max": 2,
+      "rule": "js",
+      "kind": "objective"
+    },
+    "A7.1": {
+      "label": "Hiérarchie visuelle",
+      "max": 3,
+      "rule": "subjective",
+      "kind": "subjective"
+    },
+    "A7.2": {
+      "label": "Lisibilité perçue",
+      "max": 3,
+      "rule": "subjective",
+      "kind": "subjective"
+    },
+    "A7.3": {
+      "label": "Cohérence graphique",
+      "max": 3,
+      "rule": "subjective",
+      "kind": "subjective"
+    },
+    "A7.4": {
+      "label": "Navigation intuitive",
+      "max": 3,
+      "rule": "subjective",
+      "kind": "subjective"
+    },
+    "A7.5": {
+      "label": "Clarté de l’offre",
+      "max": 3,
+      "rule": "subjective",
+      "kind": "subjective"
+    },
+    "B1.1": {
+      "label": "Profil établissement vérifié",
+      "max": 10,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "B1.2": {
+      "label": "Site lié depuis fiche",
+      "max": 5,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "B1.3": {
+      "label": "Discordances NAP",
+      "max": 5,
+      "rule": "discordances",
+      "kind": "objective"
+    },
+    "B1.4": {
+      "label": "Catégorie sur fiche",
+      "max": 5,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "B2.1": {
+      "label": "Volume avis",
+      "max": 5,
+      "rule": "reviews",
+      "kind": "objective"
+    },
+    "B2.2": {
+      "label": "Âge dernier avis (jours)",
+      "max": 5,
+      "rule": "review_age",
+      "kind": "objective"
+    },
+    "B2.3": {
+      "label": "Réponses publiques (%)",
+      "max": 5,
+      "rule": "responses",
+      "kind": "objective"
+    },
+    "B3.1": {
+      "label": "Annuaire sectoriel",
+      "max": 6,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "B3.2": {
+      "label": "Profil social officiel",
+      "max": 5,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "B3.3": {
+      "label": "Lien croisé (aucun/uni/bi)",
+      "max": 5,
+      "rule": "crosslink",
+      "kind": "objective"
+    },
+    "B3.4": {
+      "label": "Âge publication (jours)",
+      "max": 4,
+      "rule": "post_age",
+      "kind": "objective"
+    },
+    "B4.1": {
+      "label": "Rang marque",
+      "max": 8,
+      "rule": "brand_rank",
+      "kind": "objective"
+    },
+    "B4.2": {
+      "label": "Médiane rang local",
+      "max": 10,
+      "rule": "local_rank",
+      "kind": "objective"
+    },
+    "B4.3": {
+      "label": "Page indexée vérifiable",
+      "max": 4,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "B4.4": {
+      "label": "URL cohérentes (%)",
+      "max": 3,
+      "rule": "urls",
+      "kind": "objective"
+    },
+    "B5.1": {
+      "label": "Clarté fiches",
+      "max": 5,
+      "rule": "subjective",
+      "kind": "subjective"
+    },
+    "B5.2": {
+      "label": "Cohérence identité",
+      "max": 5,
+      "rule": "subjective",
+      "kind": "subjective"
+    },
+    "B5.3": {
+      "label": "Information publications",
+      "max": 5,
+      "rule": "subjective",
+      "kind": "subjective"
+    },
+    "C1.1": {
+      "label": "Besoin site/création",
+      "max": 15,
+      "rule": "site_need",
+      "kind": "objective"
+    },
+    "C1.2": {
+      "label": "Déficit technique",
+      "max": 10,
+      "rule": "percentage",
+      "kind": "objective"
+    },
+    "C1.3": {
+      "label": "Déficit visibilité",
+      "max": 10,
+      "rule": "percentage",
+      "kind": "objective"
+    },
+    "C2.1": {
+      "label": "Téléphone public sourcé",
+      "max": 10,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "C2.2": {
+      "label": "E-mail public sourcé",
+      "max": 8,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "C2.3": {
+      "label": "Canal alternatif",
+      "max": 4,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "C2.4": {
+      "label": "Correspondance contact",
+      "max": 3,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "C3.1": {
+      "label": "Décision locale",
+      "max": 8,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "C3.2": {
+      "label": "Défauts actionnables distincts",
+      "max": 8,
+      "rule": "defects",
+      "kind": "objective"
+    },
+    "C3.3": {
+      "label": "Offre correspondante",
+      "max": 4,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "C4.1": {
+      "label": "Localité ciblée",
+      "max": 5,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "C4.2": {
+      "label": "Secteur ciblé",
+      "max": 5,
+      "rule": "bool",
+      "kind": "objective"
+    },
+    "C4.3": {
+      "label": "Fraîcheur validation (jours)",
+      "max": 5,
+      "rule": "freshness",
+      "kind": "objective"
+    },
+    "C4.4": {
+      "label": "Prospect non traité",
+      "max": 5,
+      "rule": "history",
+      "kind": "objective"
+    }
+  },
+  "timeout_seconds": 12
+}

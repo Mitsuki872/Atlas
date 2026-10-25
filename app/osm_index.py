@@ -12,9 +12,10 @@ from shapely import wkb
 from shapely.geometry import Point,LineString
 from shapely.strtree import STRtree
 from app.domain import SECTORS,normalize_name
+from app.business_search import KEYS,categories
 from app.osm_download import atomic_json,DatasetInterrupted
 
-SCHEMA=3
+SCHEMA=4
 CANTON_NAMES={'VD':'Vaud','GE':'Genève','FR':'Fribourg','NE':'Neuchâtel','VS':'Valais','JU':'Jura','ZH':'Zürich','BE':'Bern','LU':'Luzern','UR':'Uri','SZ':'Schwyz','OW':'Obwalden','NW':'Nidwalden','GL':'Glarus','ZG':'Zug','SO':'Solothurn','BS':'Basel-Stadt','BL':'Basel-Landschaft','SH':'Schaffhausen','AR':'Appenzell Ausserrhoden','AI':'Appenzell Innerrhoden','SG':'St. Gallen','GR':'Graubünden','AG':'Aargau','TG':'Thurgau','TI':'Ticino'}
 
 def build_index(pbf,meta,folder,progress=lambda **kw:None,cancel=lambda:False):
@@ -44,7 +45,7 @@ def build_index(pbf,meta,folder,progress=lambda **kw:None,cancel=lambda:False):
     factory=osmium.geom.WKBFactory()
     try:
         progress(stage='indexing',message='Lecture du fichier suisse et des limites administratives…',objects_seen=0)
-        processor=osmium.FileProcessor(pbf,thread_pool=osmium.io.ThreadPool(2)).with_locations('sparse_file_array,'+str(cache)).with_areas(osmium.filter.KeyFilter('boundary','amenity','shop','craft')).with_filter(osmium.filter.KeyFilter('boundary','amenity','shop','craft'))
+        processor=osmium.FileProcessor(pbf,thread_pool=osmium.io.ThreadPool(2)).with_locations('sparse_file_array,'+str(cache)).with_areas(osmium.filter.KeyFilter('boundary',*KEYS)).with_filter(osmium.filter.KeyFilter('boundary',*KEYS))
         for obj in processor:
             seen+=1
             if time.monotonic()-last_update>=2:
@@ -61,7 +62,7 @@ def build_index(pbf,meta,folder,progress=lambda **kw:None,cancel=lambda:False):
                     elif tags.get('name'):
                         municipalities.append((tags['name'],normalize_name(tags['name']),normalize_name(tags.get('name:fr','')),geom,'https://www.openstreetmap.org/'+('way' if obj.from_way() else 'relation')+'/'+str(obj.orig_id())))
                 except (RuntimeError,ValueError):invalid+=1
-            sectors=[s for s,(k,v) in SECTORS.items() if tags.get(k)==v]
+            sectors=categories(tags)
             if not sectors or not tags.get('name'):continue
             try:
                 if obj.is_node():

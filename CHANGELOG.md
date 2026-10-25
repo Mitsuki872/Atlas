@@ -1,3 +1,7 @@
+# 1.3.0 — 25 octobre 2026
+
+Tri SQL ascendant/descendant par en-têtes et URL, champ métiers libre, index suisse général v4 avec reconstruction depuis le PBF vérifié en cache. Migration additive 0005, scores A/B/C versionnés, couvertures/identification, preuves/historiques/opportunités/oppositions, audits manuels persistants QUICK/DEEP et adaptateurs d’observations autorisées. Filtres et exports étendus, réimport compatible. Aucun fournisseur B/IA ni Lighthouse effectif ; voir SCORING_V1_3.md.
+
 # Historique
 
 ## 1.2.0 — copie OSM suisse locale

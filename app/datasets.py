@@ -2,7 +2,7 @@
 import time
 from sqlalchemy import select
 from app.db import DATA,Session,DatasetJob,Setting,serialize,now
-from app.osm_download import download_switzerland,DatasetInterrupted
+from app.osm_download import download_switzerland,cached_extract,DatasetInterrupted
 from app.osm_index import build_index
 from app.osm_local import manifest,DatasetUnavailable
 
@@ -15,7 +15,7 @@ def dataset_status():
     return {'ready':bool(ready),'dataset':ready,'job':current_job,'error':error,'license':'https://www.openstreetmap.org/copyright','provider':'https://download.geofabrik.de/europe/switzerland.html','disk_recommendation_gb':4}
 
 def run_dataset_job(id,stop_event):
-    last=[0.0];cancel_cache=[False]
+    last=[0.0];cancel_cache=[False];refresh=False
     def cancelled():
         if stop_event.is_set():return True
         if time.monotonic()-last[0]>.5:
@@ -28,15 +28,17 @@ def run_dataset_job(id,stop_event):
         if time.monotonic()-last_progress[0]<1 and value.get('stage') not in ('ready','verifying'):return
         with Session() as db:
             job=db.get(DatasetJob,id)
-            if job and job.state!='cancelled':job.progress=value;job.updated_at=now()
+            if job and job.state!='cancelled':job.progress={**value,'requested_refresh':refresh};job.updated_at=now()
             db.merge(Setting(key='worker_heartbeat',value={'at':now()}));db.commit()
         last_progress[0]=time.monotonic()
     with Session() as db:
         job=db.get(DatasetJob,id)
         if not job or job.state=='cancelled':return
+        refresh=job.progress.get('requested_refresh',False)
         job.state='running';job.error=None;job.updated_at=now();db.commit()
     try:
-        path,meta=download_switzerland(FOLDER,progress,cancelled)
+        cached=None if refresh else cached_extract(FOLDER,progress,cancelled)
+        path,meta=cached or download_switzerland(FOLDER,progress,cancelled)
         if cancelled():raise DatasetInterrupted('Préparation interrompue.')
         import shutil
         if shutil.disk_usage(FOLDER).free<3_000_000_000:raise ValueError('Au moins 3 Go libres sont requis pour l’indexation et son cache temporaire.')

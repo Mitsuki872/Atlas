@@ -1,3 +1,11 @@
+# Limites ajoutées en 1.3
+
+La qualification A/B/C est implémentée, mais ses collecteurs sont partiels : B/IA/Lighthouse/axe/captures réseau non configurés restent UNKNOWN. DEEP ne les simule pas. Import de mesures autorisées possible ; aucun fournisseur payant branché. Pas de calibration humaine/benchmark IA ni validation juridique réalisés. Le budget est contrôlé à la frontière d’adaptateur ; une future intégration payante exige un registre atomique des dépenses.
+
+Le nouvel index v4 contient les objets nommés des familles OSM d’activité, y compris des organismes/équipements non commerciaux ; pas toutes les entreprises ni tous les synonymes. Une reconstruction est nécessaire depuis le PBF local vérifié. Identification humaine multi-champs requise avant audit officiel ; une URL OSM seule reste candidate. Les actions tel/mailto peuvent être désactivées tant que l’éligibilité est à vérifier. Les exports prospects conservent les nouveaux audits mais ne remplacent pas une sauvegarde complète du CRM. Voir SCORING_V1_3.md.
+
+Les limites ci-dessous documentent la version antérieure ; la limite à huit catégories est remplacée par la recherche libre décrite ci-dessus.
+
 # Limites restantes — version 1.2
 
 La version 1.2 ajoute une découverte locale effectivement validée sur un extrait suisse réel. Elle ne valide pas l’ensemble de la V1 initiale ; les limites ci-dessous restent explicites.

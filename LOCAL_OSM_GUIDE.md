@@ -1,3 +1,5 @@
+> Version 1.3 : lire SCORING_V1_3.md pour les métiers libres, l’index v4 et sa reconstruction depuis le PBF existant. Les chiffres 1.2 ci-dessous sont conservés comme historique daté.
+
 # Version 1.2 — Annuaire suisse local
 
 ## Ce qui change pour vous

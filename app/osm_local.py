@@ -7,6 +7,7 @@ from app.db import DATA
 from app.domain import normalize_name
 from app.connectors import OverpassConnector,choose_records
 from app.osm_index import SCHEMA
+from app.business_search import matches
 
 FOLDER=DATA/'osm'
 class DatasetUnavailable(RuntimeError):pass
@@ -34,20 +35,22 @@ class LocalOSMConnector:
             where='canton=?';params=[config['canton']]
             if config.get('city','').strip():
                 city=normalize_name(config['city'])
-                matches=db.execute('SELECT DISTINCT name_norm FROM municipalities WHERE canton=? AND (name_norm=? OR alias_norm=?)',(config['canton'],city,city)).fetchall()
-                if not matches:raise DatasetUnavailable('Commune introuvable dans les limites administratives de la copie locale ; vérifiez son nom officiel.')
-                if len(matches)>1:raise DatasetUnavailable('Nom de commune ambigu dans le canton ; précisez le nom officiel.')
-                where+=' AND municipality_norm=?';params.append(matches[0][0])
-            sectors=config['sectors'];conditions=' OR '.join('EXISTS(SELECT 1 FROM json_each(sectors) WHERE value=?)' for _ in sectors)
-            rows=db.execute('SELECT * FROM businesses WHERE '+where+' AND ('+conditions+') ORDER BY identity',params+sectors).fetchall()
+                city_matches=db.execute('SELECT DISTINCT name_norm FROM municipalities WHERE canton=? AND (name_norm=? OR alias_norm=?)',(config['canton'],city,city)).fetchall()
+                if not city_matches:raise DatasetUnavailable('Commune introuvable dans les limites administratives de la copie locale ; vérifiez son nom officiel.')
+                if len(city_matches)>1:raise DatasetUnavailable('Nom de commune ambigu dans le canton ; précisez le nom officiel.')
+                where+=' AND municipality_norm=?';params.append(city_matches[0][0])
+            sectors=config['sectors']
+            rows=db.execute('SELECT * FROM businesses WHERE '+where+' ORDER BY identity',params).fetchall()
         normalized=[];normalizer=OverpassConnector();counts={s:0 for s in sectors}
         for row in rows:
-            categories=json.loads(row['sectors'])
+            tags=json.loads(row['tags'])
+            categories=[s for s in sectors if matches(s,tags)]
+            if not categories:continue
             for sector in sectors:
                 if sector in categories:counts[sector]+=1
             tags=json.loads(row['tags'])
             r=normalizer.normalize({'type':row['kind'],'id':row['osm_id'],'tags':tags,'center':{'lat':row['lat'],'lon':row['lon']},'lat':row['lat'],'lon':row['lon']})
-            r['canton']=row['canton']
+            r['canton']=row['canton'];r['sector']=categories[0];r['facts']['categories']=categories
             if not r['city'] and row['municipality']:r['city']=row['municipality']
             r['facts']={**r['facts'],'checked_at':meta['snapshot_at'],'confidence':'reported_snapshot','source_dataset':{'provider':'Geofabrik','url':meta['url'],'snapshot_at':meta['snapshot_at'],'provider_md5':meta['provider_md5'],'sha256':meta['sha256']},'geographic_scope':{'canton':row['canton'],'municipality':row['municipality'],'municipality_source':row['municipality_source'],'location_method':row['location_method'],'confidence':'derived_osm_boundaries'}}
             if not tags.get('addr:city') and row['municipality']:r['facts']['city_provenance']='Commune déduite des limites OSM, pas une adresse postale vérifiée.'
